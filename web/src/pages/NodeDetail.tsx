@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Activity, ArrowLeft, KeyRound } from "lucide-react";
+import { Activity, ArrowLeft, KeyRound, PackageCheck } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { api, ApiError } from "@/lib/api";
-import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Spinner, Table, Td, Th } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Spinner, Table, Td, Th } from "@/components/ui";
 import type { Node } from "@/pages/Nodes";
 
 interface HealthSample {
@@ -38,6 +38,18 @@ interface PanelKey {
   createdAt: number;
 }
 
+interface InstallJob {
+  id: string;
+  nodeId: string;
+  status: string;
+  step: string;
+  progress: number;
+  log: string;
+  error: string;
+  startedAt: number;
+  finishedAt: number;
+}
+
 export function NodeDetailPage() {
   const { id = "" } = useParams();
   const { t } = useI18n();
@@ -46,25 +58,30 @@ export function NodeDetailPage() {
   const [usage, setUsage] = useState<Usage[]>([]);
   const [entryPoints, setEntryPoints] = useState<EntryPoint[]>([]);
   const [keys, setKeys] = useState<PanelKey[]>([]);
+  const [jobs, setJobs] = useState<InstallJob[]>([]);
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const [probing, setProbing] = useState(false);
+  const [installing, setInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [nodeResponse, healthResponse, usageResponse, entryResponse, keyResponse] = await Promise.all([
+      const [nodeResponse, healthResponse, usageResponse, entryResponse, keyResponse, jobResponse] = await Promise.all([
         api.get<Node>(`/api/nodes/${id}`),
         api.list<HealthSample>(`/api/nodes/${id}/health`),
         api.list<Usage>(`/api/nodes/${id}/usage`),
         api.list<EntryPoint>(`/api/entrypoints?nodeId=${id}`),
         api.list<PanelKey>("/api/ssh-keys"),
+        api.list<InstallJob>(`/api/nodes/${id}/install?limit=5`),
       ]);
       setNode(nodeResponse);
       setHealth(healthResponse.data);
       setUsage(usageResponse.data);
       setEntryPoints(entryResponse.data);
       setKeys(keyResponse.data);
+      setJobs(jobResponse.data);
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));
@@ -109,6 +126,36 @@ export function NodeDetailPage() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));
     }
+  }
+
+  async function install() {
+    setInstalling(true);
+    setError(null);
+    try {
+      await api.post(`/api/nodes/${id}/install`, { password });
+      setPassword("");
+      await load();
+      await follow();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("common.error"));
+    } finally {
+      setInstalling(false);
+    }
+  }
+
+  // follow reads the log of the job while it runs.
+  async function follow() {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await api.list<InstallJob>(`/api/nodes/${id}/install?limit=5`);
+      setJobs(response.data);
+      const running = response.data.find((job) => job.status === "running" || job.status === "queued");
+      if (!running) {
+        await load();
+        return;
+      }
+    }
+    await load();
   }
 
   if (loading) {
@@ -185,6 +232,66 @@ export function NodeDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PackageCheck className="h-4 w-4" />
+            {t("nodes.install")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm">
+          <form
+            className="flex flex-wrap gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void install();
+            }}
+          >
+            <Input
+              className="max-w-xs"
+              type="password"
+              placeholder={t("nodes.passwordPlaceholder")}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <Button type="submit" disabled={installing || password.trim() === ""}>
+              {installing ? t("nodes.installing") : t("nodes.install")}
+            </Button>
+          </form>
+          <p className="text-xs text-muted-foreground">{t("nodes.installHint")}</p>
+
+          {jobs.length === 0 ? (
+            <p className="text-muted-foreground">{t("common.empty")}</p>
+          ) : (
+            jobs.map((job) => (
+              <div key={job.id} className="grid gap-2 rounded-md border border-border p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    className={
+                      job.status === "failed"
+                        ? "border-destructive/40 bg-destructive/10 text-destructive"
+                        : job.status === "succeeded"
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600"
+                          : ""
+                    }
+                  >
+                    {job.status}
+                  </Badge>
+                  <span className="text-muted-foreground">{job.step}</span>
+                  <span className="ms-auto text-xs text-muted-foreground">{job.progress}%</span>
+                </div>
+                {job.error ? <p className="text-destructive">{job.error}</p> : null}
+                {job.log ? (
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-muted/40 p-2 text-xs">
+                    {job.log}
+                  </pre>
+                ) : null}
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

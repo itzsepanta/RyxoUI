@@ -67,6 +67,8 @@ func (s *Server) routeTable() []Route {
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/health", Summary: "Read the health of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeHealth},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/usage", Summary: "Read the traffic of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeUsage},
 		{Method: http.MethodPost, Path: "/api/nodes/{id}/probe", Summary: "Ask a node about itself over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleProbeNode},
+		{Method: http.MethodPost, Path: "/api/nodes/{id}/install", Summary: "Set a node up over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleInstallNode},
+		{Method: http.MethodGet, Path: "/api/nodes/{id}/install", Summary: "Read the install jobs of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleInstallJobs},
 
 		// Keys of the panel.
 		{Method: http.MethodGet, Path: "/api/ssh-keys", Summary: "List the keys of the panel.", Scope: authz.ScopeNodesRead, Handler: s.handleListKeys},

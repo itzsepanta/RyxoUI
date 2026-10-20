@@ -67,6 +67,9 @@ func (s *sshServer) serve(connection net.Conn, signer ssh.Signer) {
 		PublicKeyCallback: func(ssh.ConnMetadata, ssh.PublicKey) (*ssh.Permissions, error) {
 			return nil, nil
 		},
+		PasswordCallback: func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) {
+			return nil, nil
+		},
 	}
 	config.AddHostKey(signer)
 

@@ -87,6 +87,9 @@ type Config struct {
 	User string
 	// PrivateKey is the PEM encoded private key.
 	PrivateKey string
+	// Password authenticates the first connection. It is only used when no
+	// private key is given and it is never stored.
+	Password string
 	// KnownHost is the pinned host key in the known_hosts format. It is
 	// empty for the first connection.
 	KnownHost string
@@ -149,12 +152,12 @@ func (c *Client) hostKeyCallback() (ssh.HostKeyCallback, error) {
 
 // Connect opens a session to the node.
 func (c *Client) Connect(ctx context.Context) (*Session, error) {
-	signer, err := ssh.ParsePrivateKey([]byte(c.config.PrivateKey))
+	callback, err := c.hostKeyCallback()
 	if err != nil {
-		return nil, fmt.Errorf("ssh: parse the private key: %w", err)
+		return nil, err
 	}
 
-	callback, err := c.hostKeyCallback()
+	auth, err := c.authMethods()
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +171,7 @@ func (c *Client) Connect(ctx context.Context) (*Session, error) {
 
 	clientConfig := &ssh.ClientConfig{
 		User:            c.config.User,
-		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		Auth:            auth,
 		HostKeyCallback: callback,
 		Timeout:         c.config.Timeout,
 	}
@@ -179,6 +182,31 @@ func (c *Client) Connect(ctx context.Context) (*Session, error) {
 		return nil, fmt.Errorf("ssh: handshake with %s: %w", address, err)
 	}
 	return &Session{client: ssh.NewClient(conn, channels, requests), config: c.config}, nil
+}
+
+// authMethods builds the ways the panel may authenticate itself.
+//
+// The private key is used when there is one. The password is the way in for
+// the first contact with a node, before the key of the panel is installed.
+func (c *Client) authMethods() ([]ssh.AuthMethod, error) {
+	var methods []ssh.AuthMethod
+
+	if strings.TrimSpace(c.config.PrivateKey) != "" {
+		signer, err := ssh.ParsePrivateKey([]byte(c.config.PrivateKey))
+		if err != nil {
+			return nil, fmt.Errorf("ssh: parse the private key: %w", err)
+		}
+		methods = append(methods, ssh.PublicKeys(signer))
+	}
+
+	if c.config.Password != "" {
+		methods = append(methods, ssh.Password(c.config.Password))
+	}
+
+	if len(methods) == 0 {
+		return nil, errors.New("ssh: neither a key nor a password was given")
+	}
+	return methods, nil
 }
 
 // KnownHost returns the host key of the node in the known_hosts format. It

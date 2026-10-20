@@ -68,6 +68,8 @@ type Server struct {
 	nodes     *nodes.Store
 	config    *nodes.ConfigStore
 	keys      *nodes.KeyStore
+	jobs      *nodes.JobStore
+	installer *nodes.Installer
 	outbox    *events.Outbox
 	registry  *events.Registry
 	limiter   *limiter
@@ -101,11 +103,15 @@ func New(cfg Config) (*Server, error) {
 		nodes:     nodes.NewStore(cfg.DB),
 		config:    nodes.NewConfigStore(cfg.DB),
 		keys:      nodes.NewKeyStore(cfg.DB),
+		jobs:      nodes.NewJobStore(cfg.DB),
 		outbox:    events.NewOutbox(cfg.DB),
 		registry:  events.DefaultRegistry(),
 		limiter:   newLimiter(cfg.RateLimitPerSecond, cfg.RateLimitBurst),
 		probe:     nodes.Probe,
 	}
+	srv.installer = nodes.NewInstaller(srv.nodes, srv.keys, srv.jobs, srv.probe, nodes.InstallerOptions{
+		Logger: logger,
+	})
 
 	if err := srv.roles.EnsureBuiltins(context.Background()); err != nil {
 		return nil, err
