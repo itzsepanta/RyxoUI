@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { api, ApiError, type ListResponse, type Operator, type Role } from "@/lib/api";
+import { api, ApiError, type Operator, type Role } from "@/lib/api";
 import {
   Alert,
   Badge,
@@ -38,8 +38,8 @@ export function OperatorsPage() {
     setLoading(true);
     try {
       const [operatorList, roleList] = await Promise.all([
-        api.get<ListResponse<Operator>>("/api/operators"),
-        api.get<ListResponse<Role>>("/api/roles"),
+        api.list<Operator>("/api/operators"),
+        api.list<Role>("/api/roles"),
       ]);
       setOperators(operatorList.data);
       setRoles(roleList.data);

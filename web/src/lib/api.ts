@@ -64,6 +64,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
+  /**
+   * list reads a collection endpoint. The data is always an array, even when
+   * the server has nothing to return.
+   */
+  list: async <T>(path: string): Promise<ListResponse<T>> => {
+    const response = await request<ListResponse<T> | null>(path);
+    return {
+      data: response?.data ?? [],
+      meta: response?.meta ?? { count: 0, limit: 0, offset: 0 },
+    };
+  },
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) }),
   put: <T>(path: string, body?: unknown) =>

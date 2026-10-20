@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { api, ApiError, type ApiToken, type ListResponse } from "@/lib/api";
+import { api, ApiError, type ApiToken } from "@/lib/api";
 import {
   Alert,
   Badge,
@@ -29,7 +29,7 @@ export function TokensPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<ListResponse<ApiToken>>("/api/tokens");
+      const response = await api.list<ApiToken>("/api/tokens");
       setTokens(response.data);
       setError(null);
     } catch (err) {

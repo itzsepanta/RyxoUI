@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { api, ApiError, type ListResponse, type Role, type ScopeInfo } from "@/lib/api";
+import { api, ApiError, type Role, type ScopeInfo } from "@/lib/api";
 import {
   Alert,
   Badge,
@@ -32,8 +32,8 @@ export function RolesPage() {
     setLoading(true);
     try {
       const [roleList, scopeList] = await Promise.all([
-        api.get<ListResponse<Role>>("/api/roles"),
-        api.get<ListResponse<ScopeInfo>>("/api/scopes"),
+        api.list<Role>("/api/roles"),
+        api.list<ScopeInfo>("/api/scopes"),
       ]);
       setRoles(roleList.data);
       setScopes(scopeList.data);

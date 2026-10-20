@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strconv"
 )
 
@@ -71,9 +72,29 @@ func writeError(w http.ResponseWriter, status int, code, message string, details
 	writeJSON(w, status, errorEnvelope{Error: ErrorBody{Code: code, Message: message, Details: details}})
 }
 
-// writeList writes a collection envelope.
+// writeList writes a collection envelope. A nil slice is written as an empty
+// collection so clients always receive a list and never a null.
 func writeList(w http.ResponseWriter, data any, meta listMeta) {
-	writeJSON(w, http.StatusOK, listEnvelope{Data: data, Meta: meta})
+	writeJSON(w, http.StatusOK, listEnvelope{Data: emptyIfNil(data), Meta: meta})
+}
+
+// emptyIfNil replaces a nil slice or map with an empty one of the same type.
+func emptyIfNil(data any) any {
+	if data == nil {
+		return []any{}
+	}
+	value := reflect.ValueOf(data)
+	switch value.Kind() {
+	case reflect.Slice:
+		if value.IsNil() {
+			return reflect.MakeSlice(value.Type(), 0, 0).Interface()
+		}
+	case reflect.Map:
+		if value.IsNil() {
+			return reflect.MakeMap(value.Type()).Interface()
+		}
+	}
+	return data
 }
 
 // apiError is an error with an HTTP status and a stable code.

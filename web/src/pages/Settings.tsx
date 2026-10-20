@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useI18n } from "@/lib/i18n";
-import { api, ApiError, type ListResponse } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Alert, Button, Card, CardContent, Input, Spinner, Table, Td, Th } from "@/components/ui";
 
 interface Setting {
@@ -20,7 +20,7 @@ export function SettingsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<ListResponse<Setting>>("/api/settings");
+      const response = await api.list<Setting>("/api/settings");
       setSettings(response.data);
       setError(null);
     } catch (err) {

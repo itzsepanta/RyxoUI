@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { api, ApiError, type AuditEntry, type ListResponse } from "@/lib/api";
+import { api, ApiError, type AuditEntry } from "@/lib/api";
 import { Alert, Card, CardContent, Spinner, Table, Td, Th } from "@/components/ui";
 
 function formatTime(value: number) {
@@ -17,7 +17,7 @@ export function AuditPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<ListResponse<AuditEntry>>("/api/audit?limit=100");
+      const response = await api.list<AuditEntry>("/api/audit?limit=100");
       setEntries(response.data);
       setError(null);
     } catch (err) {
