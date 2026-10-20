@@ -173,6 +173,16 @@ func DefaultRegistry() *Registry {
 			Description: "A panel setting was changed.",
 			Payload:     []Field{{Name: "key", Type: "string"}},
 		},
+		{
+			Name: "operator.2fa_enabled", Family: FamilyOperator, Scope: "operators:read",
+			Description: "An operator turned a second factor on.",
+			Payload:     []Field{{Name: "operatorId", Type: "string"}, {Name: "username", Type: "string"}},
+		},
+		{
+			Name: "operator.2fa_disabled", Family: FamilyOperator, Scope: "operators:read",
+			Description: "An operator turned a second factor off.",
+			Payload:     []Field{{Name: "operatorId", Type: "string"}, {Name: "username", Type: "string"}},
+		},
 	} {
 		registry.MustRegister(event)
 	}

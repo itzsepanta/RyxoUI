@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { api, ApiError, type Me, type SetupState } from "@/lib/api";
 
 interface AuthValue {
@@ -11,7 +19,11 @@ interface AuthValue {
   signOut: () => Promise<void>;
 }
 
-export function useAuth(): AuthValue {
+const AuthContext = createContext<AuthValue | null>(null);
+
+// AuthProvider keeps the session state of the panel in one place so that
+// every screen sees the same state.
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,15 +56,36 @@ export function useAuth(): AuthValue {
     void refresh();
   }, [refresh]);
 
-  const signIn = useCallback(async (username: string, password: string) => {
-    await api.post("/api/login", { username, password });
-    await refresh();
-  }, [refresh]);
+  const signIn = useCallback(
+    async (username: string, password: string) => {
+      await api.post("/api/login", { username, password });
+      await refresh();
+    },
+    [refresh],
+  );
 
   const signOut = useCallback(async () => {
-    await api.post("/api/logout");
-    setMe(null);
+    try {
+      await api.post("/api/logout");
+    } finally {
+      setMe(null);
+      setSetup((current) => current);
+    }
   }, []);
 
-  return { me, setup, loading, error, refresh, signIn, signOut };
+  const value = useMemo<AuthValue>(
+    () => ({ me, setup, loading, error, refresh, signIn, signOut }),
+    [me, setup, loading, error, refresh, signIn, signOut],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// useAuth returns the session state of the panel.
+export function useAuth(): AuthValue {
+  const value = useContext(AuthContext);
+  if (!value) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+  return value;
 }

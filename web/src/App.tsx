@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useAuth } from "@/lib/useAuth";
+import { useAuth } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
 import { LoginPage } from "@/pages/Login";
 import { SetupPage } from "@/pages/Setup";
@@ -9,6 +9,7 @@ import { AuditPage } from "@/pages/Audit";
 import { TokensPage } from "@/pages/Tokens";
 import { SettingsPage } from "@/pages/Settings";
 import { UpdatesPage } from "@/pages/Updates";
+import { SecurityPage } from "@/pages/Security";
 import { Spinner } from "@/components/ui";
 
 export function App() {
@@ -40,6 +41,7 @@ export function App() {
         <Route path="/tokens" element={<TokensPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/updates" element={<UpdatesPage />} />
+        <Route path="/security" element={<SecurityPage />} />
         <Route path="*" element={<Navigate to="/operators" replace />} />
       </Routes>
     </AppShell>

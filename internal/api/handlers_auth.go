@@ -218,7 +218,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	if op.TOTPEnabled {
 		// The second factor is completed through the mfa endpoint.
-		pending, err := auth.RandomToken(16)
+		pending, err := s.mfa.Begin(r.Context(), op.ID, body.Remember)
 		if err != nil {
 			handleError(w, r, s.log, err)
 			return
@@ -237,20 +237,6 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 type mfaRequest struct {
 	Pending string `json:"pending"`
 	Code    string `json:"code"`
-}
-
-// handleLoginMFA completes a sign in that requires a second factor.
-func (s *Server) handleLoginMFA(w http.ResponseWriter, r *http.Request) {
-	var body mfaRequest
-	if err := decodeJSON(r, &body); err != nil {
-		handleError(w, r, s.log, err)
-		return
-	}
-	if body.Pending == "" || body.Code == "" {
-		handleError(w, r, s.log, badRequest("pending token and code are required"))
-		return
-	}
-	handleError(w, r, s.log, errorf(http.StatusNotImplemented, CodeInvalidRequest, "multi factor sign in is not wired yet"))
 }
 
 // completeLogin issues the session and returns the login response.

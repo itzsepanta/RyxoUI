@@ -63,6 +63,7 @@ type Server struct {
 	tokens    *auth.APITokenStore
 	roles     *authz.Store
 	audit     *audit.Store
+	mfa       *auth.MFAService
 	outbox    *events.Outbox
 	registry  *events.Registry
 	limiter   *limiter
@@ -91,6 +92,7 @@ func New(cfg Config) (*Server, error) {
 		tokens:    auth.NewAPITokenStore(cfg.DB),
 		roles:     authz.NewStore(cfg.DB),
 		audit:     audit.NewStore(cfg.DB),
+		mfa:       auth.NewMFAService(cfg.DB),
 		outbox:    events.NewOutbox(cfg.DB),
 		registry:  events.DefaultRegistry(),
 		limiter:   newLimiter(cfg.RateLimitPerSecond, cfg.RateLimitBurst),

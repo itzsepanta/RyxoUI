@@ -4,19 +4,37 @@ import { useI18n } from "@/lib/i18n";
 import { api, ApiError } from "@/lib/api";
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input } from "@/components/ui";
 
+interface LoginResult {
+  needsMfa?: boolean;
+  pending?: string;
+}
+
 export function LoginPage({ onSignIn }: { onSignIn: () => void }) {
   const { t } = useI18n();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [pending, setPending] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const needsCode = pending !== "";
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      await api.post("/api/login", { username, password });
+      if (needsCode) {
+        await api.post("/api/login/mfa", { pending, code });
+      } else {
+        const result = await api.post<LoginResult>("/api/login", { username, password });
+        if (result.needsMfa) {
+          setPending(result.pending ?? "");
+          setCode("");
+          return;
+        }
+      }
       onSignIn();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));
@@ -31,28 +49,64 @@ export function LoginPage({ onSignIn }: { onSignIn: () => void }) {
         <CardHeader className="items-center text-center">
           <ShieldCheck className="h-8 w-8 text-primary" />
           <CardTitle>{t("app.name")}</CardTitle>
-          <p className="text-sm text-muted-foreground">{t("app.subtitle")}</p>
+          <p className="text-sm text-muted-foreground">
+            {needsCode ? t("auth.mfaHint") : t("app.subtitle")}
+          </p>
         </CardHeader>
         <CardContent>
           <form className="grid gap-3" onSubmit={submit}>
-            <label className="grid gap-1 text-sm">
-              <span className="text-muted-foreground">{t("auth.username")}</span>
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span className="text-muted-foreground">{t("auth.password")}</span>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
-            </label>
+            {needsCode ? (
+              <label className="grid gap-1 text-sm">
+                <span className="text-muted-foreground">{t("auth.code")}</span>
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  required
+                />
+              </label>
+            ) : (
+              <>
+                <label className="grid gap-1 text-sm">
+                  <span className="text-muted-foreground">{t("auth.username")}</span>
+                  <Input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    autoComplete="username"
+                    required
+                  />
+                </label>
+                <label className="grid gap-1 text-sm">
+                  <span className="text-muted-foreground">{t("auth.password")}</span>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </label>
+              </>
+            )}
             {error ? <Alert>{error}</Alert> : null}
             <Button type="submit" disabled={busy}>
-              {busy ? t("common.loading") : t("auth.signIn")}
+              {busy ? t("common.loading") : needsCode ? t("auth.verify") : t("auth.signIn")}
             </Button>
+            {needsCode ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setPending("");
+                  setCode("");
+                  setError(null);
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
+            ) : null}
           </form>
         </CardContent>
       </Card>

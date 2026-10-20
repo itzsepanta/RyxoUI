@@ -14,19 +14,20 @@ import (
 
 // Operator is a panel account.
 type Operator struct {
-	ID           string `json:"id"`
-	Username     string `json:"username"`
-	PasswordHash string `json:"-"`
-	RoleID       string `json:"roleId"`
-	IsOwner      bool   `json:"isOwner"`
-	Status       string `json:"status"`
-	LastLoginAt  int64  `json:"lastLoginAt"`
-	LastLoginIP  string `json:"lastLoginIp"`
-	TOTPSecret   string `json:"-"`
-	TOTPEnabled  bool   `json:"totpEnabled"`
-	TOTPLastUsed int64  `json:"-"`
-	CreatedAt    int64  `json:"createdAt"`
-	UpdatedAt    int64  `json:"updatedAt"`
+	ID            string `json:"id"`
+	Username      string `json:"username"`
+	PasswordHash  string `json:"-"`
+	RoleID        string `json:"roleId"`
+	IsOwner       bool   `json:"isOwner"`
+	Status        string `json:"status"`
+	LastLoginAt   int64  `json:"lastLoginAt"`
+	LastLoginIP   string `json:"lastLoginIp"`
+	TOTPSecret    string `json:"-"`
+	TOTPEnabled   bool   `json:"totpEnabled"`
+	TOTPLastUsed  int64  `json:"-"`
+	RecoveryCodes string `json:"-"`
+	CreatedAt     int64  `json:"createdAt"`
+	UpdatedAt     int64  `json:"updatedAt"`
 }
 
 // Operator status values.
@@ -230,7 +231,7 @@ func (s *OperatorStore) RecentFailures(ctx context.Context, username string, sin
 }
 
 const operatorColumns = `SELECT id, username, password_hash, role_id, is_owner, status,
-	last_login_at, last_login_ip, totp_secret, totp_enabled_at, totp_last_used_at, created_at, updated_at FROM operators`
+	last_login_at, last_login_ip, totp_secret, totp_enabled_at, totp_last_used_at, recovery_codes, created_at, updated_at FROM operators`
 
 type scanner interface {
 	Scan(dest ...any) error
@@ -244,7 +245,8 @@ func scanOperator(row scanner) (Operator, error) {
 		totpUse int64
 	)
 	err := row.Scan(&op.ID, &op.Username, &op.PasswordHash, &op.RoleID, &owner, &op.Status,
-		&op.LastLoginAt, &op.LastLoginIP, &op.TOTPSecret, &totpAt, &totpUse, &op.CreatedAt, &op.UpdatedAt)
+		&op.LastLoginAt, &op.LastLoginIP, &op.TOTPSecret, &totpAt, &totpUse, &op.RecoveryCodes,
+		&op.CreatedAt, &op.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Operator{}, err

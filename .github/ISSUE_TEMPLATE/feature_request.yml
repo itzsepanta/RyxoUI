@@ -1,0 +1,46 @@
+name: Feature request
+
+description: Suggest a capability the panel is missing
+labels: ["enhancement", "needs triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that the panel does not support today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: The proposal
+      description: What should the panel do instead?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone
+      description: Which milestone of the roadmap does this belong to?
+      options:
+        - "M0 — core"
+        - "M1 — nodes, SSH, xray"
+        - "M2 — users, quotas, statistics, portal"
+        - "M3 — sing-box, WireGuard, OpenVPN, SSH"
+        - "M4 — notifications, backups, OIDC, live connections"
+        - "M5 — experience, OpenAPI, Prometheus, ingress"
+        - "M6 — MTProto, Mieru, TrustTunnel, Sudoku"
+        - "R — roadmap"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the existing issues for the same request.
+          required: true

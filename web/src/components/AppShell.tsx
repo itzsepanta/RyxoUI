@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Languages, LogOut, Moon, ShieldCheck, Sun } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/lib/useAuth";
+import { useAuth } from "@/lib/auth";
 import { Badge, Button, cn } from "@/components/ui";
 
 const navigation = [
@@ -12,6 +12,7 @@ const navigation = [
   { to: "/tokens", key: "nav.tokens" },
   { to: "/settings", key: "nav.settings" },
   { to: "/updates", key: "nav.updates" },
+  { to: "/security", key: "nav.security" },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

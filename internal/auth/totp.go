@@ -48,6 +48,13 @@ func VerifyTOTP(secret, code string, at time.Time) bool {
 	return false
 }
 
+// CodeForTime returns the one time password of a secret at a given moment.
+// It exists so the tests and the tools can produce a valid code without
+// duplicating the algorithm.
+func CodeForTime(secret string, at time.Time) string {
+	return hotp(secret, at.UTC().Unix()/TOTPStep)
+}
+
 // hotp computes the HMAC based one time password of a counter.
 func hotp(secret string, counter int64) string {
 	key, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(strings.ToUpper(secret))

@@ -1,0 +1,80 @@
+name: Bug report
+
+description: Something in the panel does not work as expected
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The version and the platform help a lot, and a
+        failing test or a script to reproduce is worth more than a long
+        description.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `ryxoui version`
+      placeholder: ryxoui 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Linux
+        - Windows
+        - macOS
+        - Docker
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: storage
+    attributes:
+      label: Storage
+      description: Which database does the panel use?
+      options:
+        - SQLite
+        - Postgres
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines
+      description: The output of `ryxoui serve --log-level debug`, if it helps.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the existing issues for the same problem.
+          required: true
+        - label: I removed secrets, tokens and private keys from the report.
+          required: true

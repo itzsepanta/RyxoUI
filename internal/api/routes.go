@@ -22,6 +22,13 @@ func (s *Server) routeTable() []Route {
 		{Method: http.MethodGet, Path: "/api/me/sessions", Summary: "List the sessions of the signed in operator.", Handler: s.handleMySessions},
 		{Method: http.MethodDelete, Path: "/api/me/sessions/{id}", Summary: "Revoke one of your sessions.", Handler: s.handleRevokeSession},
 
+		// Second factor.
+		{Method: http.MethodGet, Path: "/api/me/2fa", Summary: "Report the state of your second factor.", Handler: s.handle2FAStatus},
+		{Method: http.MethodPost, Path: "/api/me/2fa/totp", Summary: "Start the enrollment of a time based code.", Handler: s.handleTOTPStart},
+		{Method: http.MethodPost, Path: "/api/me/2fa/totp/confirm", Summary: "Confirm the enrollment and receive recovery codes.", Handler: s.handleTOTPConfirm},
+		{Method: http.MethodDelete, Path: "/api/me/2fa", Summary: "Turn the second factor off.", Handler: s.handle2FADisable},
+		{Method: http.MethodPost, Path: "/api/me/2fa/recovery", Summary: "Consume a recovery code.", Handler: s.handle2FARecovery},
+
 		// Operators.
 		{Method: http.MethodGet, Path: "/api/operators", Summary: "List panel operators.", Scope: authz.ScopeOperatorsRead, Handler: s.handleListOperators},
 		{Method: http.MethodPost, Path: "/api/operators", Summary: "Create an operator.", Scope: authz.ScopeOperatorsWrite, Handler: s.handleCreateOperator},
