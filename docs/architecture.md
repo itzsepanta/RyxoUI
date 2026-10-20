@@ -78,8 +78,33 @@ backoff and end up in a dead letter state instead of being lost.
 Event types carry a schema and the scope required to read them. The
 catalogue is exposed at `/api/event-types`.
 
-## API conventions
+## Self update
 
+The panel can replace its own binary with a newer release.
+
+```
+release feed (GitHub API)
+        │  check every 6 h
+        ▼
+internal/update.Manager ──► update_state table (last known state)
+        │
+        ├─ download the artefact for runtime.GOOS/runtime.GOARCH
+        ├─ verify the SHA-256 against the published .sha256 file
+        ├─ extract and rename the running binary
+        └─ ask systemd to restart (optional)
+```
+
+Rules:
+
+- a release without a checksum file is never installed;
+- a download whose checksum does not match is discarded;
+- the binary is renamed before the new one is put in place, so the
+  replacement also works on Windows where a running image cannot be
+  overwritten;
+- the previous binary stays next to the new one as `ryxoui.old`;
+- the endpoints are guarded by the `panel:update` scope.
+
+## API conventions
 - Base path: `/api`.
 - Errors: `{"error":{"code":"...","message":"..."}}` with a matching HTTP
   status.

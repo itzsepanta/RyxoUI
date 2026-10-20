@@ -30,8 +30,11 @@ func TestMigrateAppliesOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Migrate: %v", err)
 	}
-	if len(ran) != 1 || ran[0] != "0001" {
-		t.Fatalf("applied = %v, want [0001]", ran)
+	if len(ran) == 0 {
+		t.Fatal("expected at least one migration to be applied")
+	}
+	if ran[0] != "0001" {
+		t.Fatalf("first applied migration = %q, want 0001", ran[0])
 	}
 
 	again, err := migrator.Migrate()

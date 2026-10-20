@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -19,6 +20,7 @@ import (
 	"github.com/ryxoui/ryxoui/internal/api"
 	"github.com/ryxoui/ryxoui/internal/db"
 	"github.com/ryxoui/ryxoui/internal/events"
+	"github.com/ryxoui/ryxoui/internal/update"
 	"github.com/ryxoui/ryxoui/internal/web"
 
 	// Storage drivers.
@@ -28,6 +30,9 @@ import (
 
 // version is set at build time with -ldflags "-X main.version=...".
 var version = "dev"
+
+// defaultUpdateRepository is the release feed of the panel.
+const defaultUpdateRepository = "itzsepanta/RyxoUI"
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -48,6 +53,8 @@ func run(args []string) error {
 		return serve(args)
 	case "migrate":
 		return migrate(args)
+	case "update":
+		return updateCommand(args)
 	case "version":
 		fmt.Printf("ryxoui %s\n", version)
 		return nil
@@ -66,17 +73,24 @@ func usage() {
 Usage:
   ryxoui serve   [flags]   start the panel
   ryxoui migrate [flags]   apply the database schema
+  ryxoui update  [flags]   check for and install a newer release
   ryxoui version            print the version
 
 Serve flags:
-  --listen string     address to listen on (default "127.0.0.1:8080")
-  --db string         database path or connection string (default "ryxoui.db")
-  --driver string     "sqlite" (default) or "postgres"
-  --basepath string   prefix for every route, for example "/panel"
-  --tls string        "none" (default) or "auto"
-  --cert-file string  TLS certificate for "auto"
-  --key-file string   TLS key for "auto"
-  --log-level string  "debug", "info", "warn" or "error" (default "info")`)
+  --listen string      address to listen on (default "127.0.0.1:8080")
+  --db string          database path or connection string (default "ryxoui.db")
+  --driver string      "sqlite" (default) or "postgres"
+  --basepath string    prefix for every route, for example "/panel"
+  --tls string         "none" (default) or "auto"
+  --cert-file string   TLS certificate for "auto"
+  --key-file string    TLS key for "auto"
+  --log-level string   "debug", "info", "warn" or "error" (default "info")
+
+Update flags:
+  --repo string        release feed as owner/name (default "itzsepanta/RyxoUI")
+  --interval duration  delay between two automatic checks (default 6h)
+  --service string     systemd unit to restart after an update
+  --apply              install the release that was found`)
 }
 
 // flags is a small parser for the command line options used by the panel.
@@ -112,6 +126,12 @@ func (f *flags) get(name, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// has reports whether a flag was given, even without a value.
+func (f *flags) has(name string) bool {
+	_, ok := f.values[name]
+	return ok
 }
 
 // openDatabase opens the configured database.
@@ -165,6 +185,72 @@ func migrate(args []string) error {
 	return nil
 }
 
+// updateCommand runs the self update from the command line.
+func updateCommand(args []string) error {
+	parsed, err := parseFlags(args)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+
+	handle, err := openDatabase(ctx, parsed)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+
+	if _, err := db.NewMigrator(handle).Migrate(); err != nil {
+		return err
+	}
+
+	manager := newUpdateManager(parsed, handle, slog.Default())
+	state, err := manager.Check(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("current: %s\nlatest:  %s\nstatus:  %s\n", state.CurrentVersion, state.LatestVersion, state.Message)
+
+	if !parsed.has("apply") {
+		return nil
+	}
+	if !state.UpdateAvailable() {
+		fmt.Println("the panel is already up to date")
+		return nil
+	}
+
+	state, err = manager.Apply(ctx, state.LatestVersion)
+	if err != nil {
+		return err
+	}
+	fmt.Println(state.Message)
+	return nil
+}
+
+// newUpdateManager builds the self update capability.
+func newUpdateManager(parsed *flags, handle *db.DB, logger *slog.Logger) *update.Manager {
+	repo := parsed.get("repo", defaultUpdateRepository)
+	interval := 6 * time.Hour
+	if raw := parsed.get("interval", ""); raw != "" {
+		if parsed, err := time.ParseDuration(raw); err == nil {
+			interval = parsed
+		}
+	}
+	service := parsed.get("service", "")
+
+	options := update.Options{
+		CurrentVersion: version,
+		Repository:     repo,
+		CheckInterval:  interval,
+		Logger:         logger,
+	}
+	if service != "" {
+		options.Restart = func(ctx context.Context) error {
+			return exec.CommandContext(ctx, "systemctl", "restart", service).Run()
+		}
+	}
+	return update.NewManager(options, update.NewStore(handle))
+}
+
 // serve starts the panel.
 func serve(args []string) error {
 	parsed, err := parseFlags(args)
@@ -204,10 +290,22 @@ func serve(args []string) error {
 		SecureCookies:      parsed.get("tls", "none") != "none",
 		RateLimitPerSecond: 20,
 		RateLimitBurst:     60,
+		Version:            version,
+		Platform:           update.Current().String(),
 	})
 	if err != nil {
 		return err
 	}
+
+	// The self update capability checks the release feed on a fixed
+	// interval and can install a newer release of the panel.
+	updateManager := newUpdateManager(parsed, handle, logger)
+	api.SetUpdateManager(updateManager)
+	go func() {
+		if err := updateManager.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("update scheduler stopped", "error", err)
+		}
+	}()
 
 	// The event dispatcher moves events from the outbox to the subscribers.
 	dispatcher := events.NewDispatcher(events.NewOutbox(handle), handle, nil, events.DispatcherOptions{

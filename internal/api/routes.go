@@ -54,5 +54,10 @@ func (s *Server) routeTable() []Route {
 		// Documentation.
 		{Method: http.MethodGet, Path: "/api/openapi.json", Summary: "The OpenAPI description of this API.", Public: true, Handler: s.handleOpenAPIJSON},
 		{Method: http.MethodGet, Path: "/api/openapi.yaml", Summary: "The OpenAPI description of this API as YAML.", Public: true, Handler: s.handleOpenAPIYAML},
+
+		// Self update.
+		{Method: http.MethodGet, Path: "/api/panel/update", Summary: "Report the self update status.", Scope: authz.ScopeSettingsRead, Handler: s.handleUpdateStatus},
+		{Method: http.MethodPost, Path: "/api/panel/update/check", Summary: "Look for a newer release.", Scope: authz.ScopePanelUpdate, Handler: s.handleUpdateCheck},
+		{Method: http.MethodPost, Path: "/api/panel/update/apply", Summary: "Install a newer release.", Scope: authz.ScopePanelUpdate, Handler: s.handleUpdateApply},
 	}
 }

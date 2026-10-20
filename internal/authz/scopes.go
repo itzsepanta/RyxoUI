@@ -23,6 +23,7 @@ const (
 	ScopeRolesWrite     Scope = "roles:write"
 	ScopeSettingsRead   Scope = "settings:read"
 	ScopeSettingsWrite  Scope = "settings:write"
+	ScopePanelUpdate    Scope = "panel:update"
 	ScopeAuditRead      Scope = "audit:read"
 	ScopeTokensRead     Scope = "tokens:read"
 	ScopeTokensWrite    Scope = "tokens:write"
@@ -43,6 +44,7 @@ var scopeRegistry = map[Scope]ScopeInfo{
 	ScopeRolesWrite:     {"roles:write", "Create, edit and remove roles.", "access"},
 	ScopeSettingsRead:   {"settings:read", "View panel settings.", "settings"},
 	ScopeSettingsWrite:  {"settings:write", "Change panel settings.", "settings"},
+	ScopePanelUpdate:    {"panel:update", "Install a new release of the panel.", "settings"},
 	ScopeAuditRead:      {"audit:read", "Read the audit log.", "security"},
 	ScopeTokensRead:     {"tokens:read", "View API tokens.", "security"},
 	ScopeTokensWrite:    {"tokens:write", "Create and revoke API tokens.", "security"},

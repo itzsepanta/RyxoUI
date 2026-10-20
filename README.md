@@ -70,6 +70,36 @@ Open `http://127.0.0.1:8080` and create the owner account.
 | `--cert-file`, `--key-file` | empty | certificate for `auto` |
 | `--log-level` | `info` | `debug`, `info`, `warn` or `error` |
 
+## Auto update
+
+The panel can update itself from the releases of its GitHub repository.
+
+- It checks the release feed on a fixed interval (six hours by default) and
+  records the result in the `update_state` table.
+- The **Updates** page shows the running version, the newest release, the
+  artefact that matches the platform and the release notes.
+- Installing a release downloads the artefact, verifies its SHA-256
+  checksum against the `.sha256` file published next to it, and refuses to
+  install anything that does not match.
+- The running binary is renamed instead of overwritten, so the replacement
+  works on Linux and on Windows, and the previous binary is kept as
+  `ryxoui.old`.
+- When a systemd unit is configured the panel restarts itself after the
+  install; otherwise it reports that a restart is needed.
+
+```bash
+ryxoui serve --db ryxoui.db --repo itzsepanta/RyxoUI --interval 6h --service ryxoui.service
+ryxoui update --repo itzsepanta/RyxoUI            # report the newest release
+ryxoui update --repo itzsepanta/RyxoUI --apply    # install it
+```
+
+Releases are built by `.github/workflows/release.yml`. Every release carries
+one archive per platform, named `ryxoui_<version>_<os>_<arch>.tar.gz`, and
+the matching `.sha256` file that the panel verifies before installing.
+
+Updating the panel itself needs the `panel:update` scope, which only the
+owner role holds by default.
+
 ## Development
 
 ```bash

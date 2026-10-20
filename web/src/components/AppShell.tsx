@@ -11,6 +11,7 @@ const navigation = [
   { to: "/audit", key: "nav.audit" },
   { to: "/tokens", key: "nav.tokens" },
   { to: "/settings", key: "nav.settings" },
+  { to: "/updates", key: "nav.updates" },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

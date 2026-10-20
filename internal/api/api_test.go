@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/ryxoui/ryxoui/internal/db"
+	"github.com/ryxoui/ryxoui/internal/update"
 	_ "modernc.org/sqlite"
 )
 
@@ -36,6 +37,10 @@ func newTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}
+	SetUpdateManager(update.NewManager(update.Options{
+		CurrentVersion: "1.0.0",
+		Repository:     "itzsepanta/RyxoUI",
+	}, update.NewStore(store)))
 	return &testEnv{server: server, db: store}
 }
 
@@ -342,6 +347,42 @@ func TestEventCatalogueIsExposed(t *testing.T) {
 	data, _ := decodeBody(t, rec)["data"].([]any)
 	if len(data) == 0 {
 		t.Fatal("expected event types")
+	}
+}
+
+func TestUpdateEndpointsRequireAuthentication(t *testing.T) {
+	env := newTestEnv(t)
+	env.setup(t)
+
+	rec := env.do(t, http.MethodGet, "/api/panel/update", nil, "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", rec.Code)
+	}
+}
+
+func TestUpdateStatusIsReported(t *testing.T) {
+	env := newTestEnv(t)
+	cookie := env.setup(t)
+
+	rec := env.do(t, http.MethodGet, "/api/panel/update", nil, cookie)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := decodeBody(t, rec)
+	if _, ok := body["status"]; !ok {
+		t.Fatalf("unexpected body %v", body)
+	}
+}
+
+func TestUpdateApplyNeedsConfirmation(t *testing.T) {
+	env := newTestEnv(t)
+	cookie := env.setup(t)
+
+	rec := env.do(t, http.MethodPost, "/api/panel/update/apply", map[string]any{
+		"version": "9.9.9",
+	}, cookie)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rec.Code)
 	}
 }
 

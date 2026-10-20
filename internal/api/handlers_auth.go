@@ -670,13 +670,21 @@ func (s *Server) handleListEventTypes(w http.ResponseWriter, r *http.Request) {
 
 // handlePanelInfo describes the running panel.
 func (s *Server) handlePanelInfo(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{
+	body := map[string]any{
 		"name":          "RyxoUI",
 		"apiVersion":    APIVersion,
+		"version":       s.cfg.Version,
+		"platform":      s.cfg.Platform,
 		"dialect":       string(s.cfg.DB.Dialect()),
 		"basePath":      s.cfg.BasePath,
 		"operatorCount": operatorCount(s),
-	})
+	}
+	if updateManager != nil {
+		state := updateManager.State(r.Context())
+		body["updateAvailable"] = state.UpdateAvailable()
+		body["latestVersion"] = state.LatestVersion
+	}
+	writeJSON(w, http.StatusOK, body)
 }
 
 func operatorCount(s *Server) int {

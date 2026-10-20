@@ -45,6 +45,10 @@ type Config struct {
 	RateLimitPerSecond float64
 	// RateLimitBurst is the bucket size of the limiter.
 	RateLimitBurst int
+	// Version is the version of the running panel.
+	Version string
+	// Platform describes the machine the panel runs on.
+	Platform string
 }
 
 // Server serves the panel API.
