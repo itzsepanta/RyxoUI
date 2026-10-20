@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ryxoui/ryxoui/internal/db"
+	"github.com/ryxoui/ryxoui/internal/engines"
 	"github.com/ryxoui/ryxoui/internal/id"
 	panelssh "github.com/ryxoui/ryxoui/internal/ssh"
 )
@@ -139,6 +140,7 @@ type Installer struct {
 	store  *Store
 	keys   *KeyStore
 	jobs   *JobStore
+	config *ConfigStore
 	probe  func(ctx context.Context, node Node, privateKey string) (ProbeResult, error)
 	logger *slog.Logger
 
@@ -153,10 +155,16 @@ type InstallerOptions struct {
 	Logger *slog.Logger
 	// Timeout bounds one step. Zero means two minutes.
 	Timeout time.Duration
+	// Engine is the protocol engine the job puts on the node. It may be
+	// nil, then the job only prepares the node.
+	Engine engines.Engine
+	// EngineVersion is the version of the engine the job installs. Empty
+	// means the newest one the panel knows.
+	EngineVersion string
 }
 
 // NewInstaller returns an installer.
-func NewInstaller(store *Store, keys *KeyStore, jobs *JobStore, probe func(ctx context.Context, node Node, privateKey string) (ProbeResult, error), opts InstallerOptions) *Installer {
+func NewInstaller(store *Store, keys *KeyStore, jobs *JobStore, config *ConfigStore, probe func(ctx context.Context, node Node, privateKey string) (ProbeResult, error), opts InstallerOptions) *Installer {
 	if opts.Logger == nil {
 		opts.Logger = slog.Default()
 	}
@@ -167,6 +175,7 @@ func NewInstaller(store *Store, keys *KeyStore, jobs *JobStore, probe func(ctx c
 		store:  store,
 		keys:   keys,
 		jobs:   jobs,
+		config: config,
 		probe:  probe,
 		logger: opts.Logger,
 		logs:   map[string]*strings.Builder{},
@@ -277,6 +286,20 @@ func (i *Installer) run(ctx context.Context, job InstallJob, node Node, password
 	}
 	i.write(job.ID, "the directories of the panel are ready\n")
 
+	// The engine of the node is put on it and started with the
+	// configuration of the node.
+	if i.opts.Engine != nil {
+		job.Step = "engine"
+		job.Progress = 70
+		if err := i.jobs.Update(ctx, job); err != nil {
+			return InstallJob{}, err
+		}
+		if err := i.installEngine(stepCtx, node, key.PrivateKey); err != nil {
+			return fail("engine", err)
+		}
+		i.write(job.ID, "the engine %s is installed\n", i.opts.Engine.Name())
+	}
+
 	// The node is asked whether it is alive, this time with the key.
 	job.Step = "verify"
 	job.Progress = 85
@@ -305,6 +328,94 @@ func (i *Installer) run(ctx context.Context, job InstallJob, node Node, password
 	}
 	i.write(job.ID, "the node is ready\n")
 	return job, nil
+}
+
+// installEngine puts the protocol engine on the node and applies the
+// configuration of the node.
+func (i *Installer) installEngine(ctx context.Context, node Node, privateKey string) error {
+	config, err := i.ConfigOf(ctx, node.ID)
+	if err != nil {
+		return err
+	}
+
+	target := engines.Target{
+		NodeID:     node.ID,
+		Host:       node.SSHHostName(),
+		Port:       node.SSHPort,
+		User:       node.SSHUser,
+		PrivateKey: privateKey,
+		KnownHost:  node.HostKey,
+		OS:         node.OS,
+		Arch:       node.Arch,
+	}
+
+	if err := i.opts.Engine.Install(ctx, target, i.opts.EngineVersion); err != nil {
+		return err
+	}
+	return i.opts.Engine.Apply(ctx, target, config)
+}
+
+// ConfigOf builds the configuration of a node from the store.
+func (i *Installer) ConfigOf(ctx context.Context, nodeID string) (engines.Config, error) {
+	config := engines.Config{}
+
+	if i.config == nil {
+		return config, nil
+	}
+
+	entrypoints, err := i.config.EntryPoints(ctx, nodeID)
+	if err != nil {
+		return config, err
+	}
+	for _, item := range entrypoints {
+		config.Entrypoints = append(config.Entrypoints, engines.Entrypoint{
+			ID:      item.ID,
+			Name:    item.Name,
+			Tag:     item.Tag,
+			Type:    item.Type,
+			Config:  item.Config,
+			Enabled: item.Enabled,
+		})
+	}
+
+	egresses, err := i.config.Egresses(ctx, nodeID)
+	if err != nil {
+		return config, err
+	}
+	for _, item := range egresses {
+		config.Egresses = append(config.Egresses, engines.Egress{
+			ID:      item.ID,
+			Name:    item.Name,
+			Tag:     item.Tag,
+			Type:    item.Type,
+			Config:  item.Config,
+			Enabled: item.Enabled,
+		})
+	}
+
+	endpoints, err := i.config.Endpoints(ctx, nodeID)
+	if err != nil {
+		return config, err
+	}
+	for _, item := range endpoints {
+		// A destination carries its tag and its state in its settings, the
+		// table itself only knows the name and the type.
+		tag, _ := item.Config["tag"].(string)
+		enabled := true
+		if disabled, ok := item.Config["disabled"].(bool); ok {
+			enabled = !disabled
+		}
+		config.Endpoints = append(config.Endpoints, engines.Endpoint{
+			ID:      item.ID,
+			Name:    item.Name,
+			Tag:     tag,
+			Type:    item.Type,
+			Config:  item.Config,
+			Enabled: enabled,
+		})
+	}
+
+	return config, nil
 }
 
 // Log returns the log of a job while it runs.

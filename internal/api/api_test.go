@@ -22,6 +22,13 @@ type testEnv struct {
 
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
+	return newTestEnvWith(t, Config{})
+}
+
+// newTestEnvWith builds a server with extra configuration, such as the
+// protocol engine of the panel.
+func newTestEnvWith(t *testing.T, cfg Config) *testEnv {
+	t.Helper()
 	handle, err := sql.Open("sqlite", "file:"+t.Name()+"?mode=memory&cache=shared&_pragma=busy_timeout(5000)")
 	if err != nil {
 		t.Fatalf("open: %v", err)
@@ -33,7 +40,9 @@ func newTestEnv(t *testing.T) *testEnv {
 	if _, err := db.NewMigrator(store).Migrate(); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	server, err := New(Config{DB: store, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	cfg.DB = store
+	cfg.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	server, err := New(cfg)
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}

@@ -28,7 +28,7 @@ func TestTheInstallerSetsTheNodeUp(t *testing.T) {
 		t.Fatalf("create the node: %v", err)
 	}
 
-	installer := NewInstaller(store, keys, jobs, func(ctx context.Context, node Node, privateKey string) (ProbeResult, error) {
+	installer := NewInstaller(store, keys, jobs, NewConfigStore(store.db), func(ctx context.Context, node Node, privateKey string) (ProbeResult, error) {
 		return ProbeResult{OS: "linux", Arch: "x86_64", HostKey: "pinned"}, nil
 	}, InstallerOptions{})
 
@@ -94,7 +94,7 @@ func TestTheInstallerReportsAFailure(t *testing.T) {
 		t.Fatalf("create the node: %v", err)
 	}
 
-	installer := NewInstaller(store, keys, jobs, nil, InstallerOptions{Timeout: 5 * time.Second})
+	installer := NewInstaller(store, keys, jobs, NewConfigStore(store.db), nil, InstallerOptions{Timeout: 5 * time.Second})
 
 	job, err := installer.Run(context.Background(), node, "wrong")
 	if err == nil {

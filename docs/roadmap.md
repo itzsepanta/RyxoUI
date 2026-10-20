@@ -196,16 +196,16 @@ React 18 + TS + Vite + Tailwind + shadcn/ui. صفحات اصلی:
 **DoD M0:** e2e: ثبت‌نام اپراتور → ورود → ساخت نقش → محافظت endpoint با scope → ثبت audit → خروج.
 
 ### M1 — نودها، SSH، موتور xray
-- [ ] **M1.1** مدل node + registry CRUD + محدودیت حجم/دورهٔ نود + multiplier.
-- [ ] **M1.2** لایهٔ SSH: کلید اختصاصی per-node، known_hosts pinning، اجرای فرمان با timeout، SFTP برای کپی فایل.
-- [ ] **M1.3** نصب از راه دور: job با وضعیت/stream لاگ، probe اولیه، انتخاب نسخه، systemd unit، uninstall.
-- [ ] **M1.4** Health: heartbeat، version/arch/core، disk/mem/load samples، هشدار.
-- [ ] **M1.5** موتور xray: adapter کامل `Engine` (Install/Render/Apply/UpsertUser/SuspendUser/RemoveUser/Usage/Health).
-- [ ] **M1.6** مدل پیکربندی: entrypoints / egresses / endpoints / templates / route.
+- [x] **M1.1** مدل node + registry CRUD + محدودیت حجم/دورهٔ نود + multiplier. — ✅ `internal/nodes`، migration `0004_nodes.sql`
+- [x] **M1.2** لایهٔ SSH: کلید اختصاصی per-node، known_hosts pinning، اجرای فرمان با timeout، SFTP برای کپی فایل. — ✅ `internal/ssh` + `internal/nodes/keys.go`
+- [~] **M1.3** نصب از راه دور: job با وضعیت/stream لاگ، probe اولیه، انتخاب نسخه، systemd unit، uninstall. — 🟡 `internal/nodes/install.go` (job با step/progress/log، واحد systemd، probe اولیه، نصب موتور). مانده: uninstall و جریان لاگ زنده.
+- [x] **M1.4** Health: heartbeat، version/arch/core، disk/mem/load samples، هشدار. — ✅ probe + collector پنج‌دقیقه‌ای (`internal/nodes/collector.go`). مانده: هشدارها.
+- [x] **M1.5** موتور xray: adapter کامل `Engine` (Install/Render/Apply/UpsertUser/SuspendUser/RemoveUser/Usage/Health). — ✅ `internal/engines` (قرارداد) + `internal/engines/xray` + suite هم‌رفتاری `internal/engines/enginetest`. مانده: آمار ترافیک از stats API.
+- [~] **M1.6** مدل پیکربندی: entrypoints / egresses / endpoints / templates / route. — 🟡 مدل و API آماده، صفحهٔ UI مانده.
 - [ ] **M1.7** Preset catalogue: قالب‌های آمادهٔ inbound/outbound با clone-and-edit.
 - [ ] **M1.8** ابزارهای کلید: keypair، reality، vless-encryption، ECH keypair (در M5 نهایی می‌شود).
 - [ ] **M1.9** لاگ نود: tail با فیلتر سطح/زمان، ring buffer.
-- [ ] **M1.10** صفحهٔ نودها + تب detail (overview/health/logs/config) + جادوگر نصب.
+- [~] **M1.10** صفحهٔ نودها + تب detail (overview/health/logs/config) + جادوگر نصب. — 🟡 صفحهٔ نودها و تب‌های overview/health/config/SSH موجود. مانده: تب لاگ و جادوگر نصب.
 - [ ] **M1.11** مسیر `/install/ryxoui.sh` + endpoint دانلود باینری + CA panel.
 
 **DoD M1:** نصب خودکار xray روی یک VPS آزمایشی، ساخت entrypoint، ساخت کاربر آزمایشی، تأیید connection.

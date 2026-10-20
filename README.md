@@ -33,6 +33,8 @@ publicly observable *capability surface* of comparable panels.
 | Access control | 37 scopes in 14 groups, three builtin roles, custom roles with inheritance |
 | Audit | every change is logged inside the same transaction as the change |
 | Events | durable outbox, retry with backoff, delivery records, 9 event types |
+| Nodes | registry, SSH access, health samples, traffic, install over SSH |
+| Engines | one contract for every protocol, the xray adapter and its conformance suite |
 | API | 22 endpoints, generated OpenAPI document, consistent error envelope |
 | Self update | finds new releases, verifies the checksum, replaces the running binary |
 | Interface | React 18, TypeScript, Vite, Tailwind, English and Persian, light and dark |
@@ -168,6 +170,9 @@ internal/auth     passwords, sessions, API tokens, TOTP
 internal/authz    scopes, roles and permission checks
 internal/audit    the audit log
 internal/events   event catalogue, outbox and dispatcher
+internal/nodes    node registry, configuration, health, install jobs
+internal/ssh      SSH client, key pairs, host key pinning
+internal/engines  the protocol contract and its adapters
 internal/update   self update capability
 internal/api      HTTP API, route table and OpenAPI generation
 internal/web      embedded frontend assets

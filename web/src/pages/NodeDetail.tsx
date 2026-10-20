@@ -50,6 +50,11 @@ interface InstallJob {
   finishedAt: number;
 }
 
+interface EngineInfo {
+  name: string;
+  versions?: { version: string; asset: string }[];
+}
+
 export function NodeDetailPage() {
   const { id = "" } = useParams();
   const { t } = useI18n();
@@ -59,6 +64,8 @@ export function NodeDetailPage() {
   const [entryPoints, setEntryPoints] = useState<EntryPoint[]>([]);
   const [keys, setKeys] = useState<PanelKey[]>([]);
   const [jobs, setJobs] = useState<InstallJob[]>([]);
+  const [config, setConfig] = useState("");
+  const [engine, setEngine] = useState<EngineInfo | null>(null);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const [probing, setProbing] = useState(false);
@@ -83,6 +90,16 @@ export function NodeDetailPage() {
       setKeys(keyResponse.data);
       setJobs(jobResponse.data);
       setError(null);
+
+      // The configuration of the node and the engine of the panel.
+      const [configResponse, engineResponse] = await Promise.all([
+        fetch(`/api/nodes/${id}/config`, { credentials: "include" })
+          .then((response) => (response.ok ? response.text() : ""))
+          .catch(() => ""),
+        api.get<EngineInfo>("/api/engines").catch(() => null),
+      ]);
+      setConfig(configResponse);
+      setEngine(engineResponse);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));
     } finally {
@@ -232,6 +249,23 @@ export function NodeDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("nodes.config")}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <Badge>{engine?.name ?? "—"}</Badge>
+            <span>{t("nodes.configHint")}</span>
+          </div>
+          {config ? (
+            <pre className="max-h-96 overflow-auto rounded-md bg-muted/40 p-3 text-xs">{config}</pre>
+          ) : (
+            <p className="text-muted-foreground">{t("common.empty")}</p>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

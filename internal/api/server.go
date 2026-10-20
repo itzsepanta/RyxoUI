@@ -12,6 +12,7 @@ import (
 	"github.com/ryxoui/ryxoui/internal/auth"
 	"github.com/ryxoui/ryxoui/internal/authz"
 	"github.com/ryxoui/ryxoui/internal/db"
+	"github.com/ryxoui/ryxoui/internal/engines"
 	"github.com/ryxoui/ryxoui/internal/events"
 	"github.com/ryxoui/ryxoui/internal/nodes"
 )
@@ -50,6 +51,9 @@ type Config struct {
 	Version string
 	// Platform describes the machine the panel runs on.
 	Platform string
+	// Engine is the protocol engine the panel drives on the nodes. It may
+	// be nil, then the panel only manages the nodes themselves.
+	Engine engines.Engine
 }
 
 // Server serves the panel API.
@@ -73,6 +77,7 @@ type Server struct {
 	outbox    *events.Outbox
 	registry  *events.Registry
 	limiter   *limiter
+	engine    engines.Engine
 	probe     func(ctx context.Context, node nodes.Node, privateKey string) (nodes.ProbeResult, error)
 }
 
@@ -107,10 +112,12 @@ func New(cfg Config) (*Server, error) {
 		outbox:    events.NewOutbox(cfg.DB),
 		registry:  events.DefaultRegistry(),
 		limiter:   newLimiter(cfg.RateLimitPerSecond, cfg.RateLimitBurst),
+		engine:    cfg.Engine,
 		probe:     nodes.Probe,
 	}
-	srv.installer = nodes.NewInstaller(srv.nodes, srv.keys, srv.jobs, srv.probe, nodes.InstallerOptions{
+	srv.installer = nodes.NewInstaller(srv.nodes, srv.keys, srv.jobs, srv.config, srv.probe, nodes.InstallerOptions{
 		Logger: logger,
+		Engine: srv.engine,
 	})
 
 	if err := srv.roles.EnsureBuiltins(context.Background()); err != nil {

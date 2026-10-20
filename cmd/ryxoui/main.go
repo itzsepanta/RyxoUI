@@ -19,10 +19,14 @@ import (
 
 	"github.com/ryxoui/ryxoui/internal/api"
 	"github.com/ryxoui/ryxoui/internal/db"
+	"github.com/ryxoui/ryxoui/internal/engines"
 	"github.com/ryxoui/ryxoui/internal/events"
 	"github.com/ryxoui/ryxoui/internal/nodes"
 	"github.com/ryxoui/ryxoui/internal/update"
 	"github.com/ryxoui/ryxoui/internal/web"
+
+	// The protocol engines the panel knows.
+	_ "github.com/ryxoui/ryxoui/internal/engines/xray"
 
 	// Storage drivers.
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -284,6 +288,12 @@ func serve(args []string) error {
 		return err
 	}
 
+	// The protocol engine the panel drives on the nodes.
+	engine, err := engines.Get("xray")
+	if err != nil {
+		logger.Warn("the panel has no protocol engine", "error", err)
+	}
+
 	server, err := api.New(api.Config{
 		DB:                 handle,
 		Logger:             logger,
@@ -293,6 +303,7 @@ func serve(args []string) error {
 		RateLimitBurst:     60,
 		Version:            version,
 		Platform:           update.Current().String(),
+		Engine:             engine,
 	})
 	if err != nil {
 		return err

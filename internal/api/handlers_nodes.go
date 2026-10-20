@@ -8,6 +8,7 @@ import (
 	"github.com/ryxoui/ryxoui/internal/audit"
 	"github.com/ryxoui/ryxoui/internal/authz"
 	"github.com/ryxoui/ryxoui/internal/db"
+	"github.com/ryxoui/ryxoui/internal/engines"
 	"github.com/ryxoui/ryxoui/internal/nodes"
 )
 
@@ -312,6 +313,69 @@ func (s *Server) handleNodeUsage(w http.ResponseWriter, r *http.Request) {
 	writeList(w, usage, listMeta{Count: len(usage), Limit: len(usage)})
 }
 
+// handleNodeConfig renders the configuration of a node with the engine of
+// the panel. It shows what the node would run, without touching the node.
+func (s *Server) handleNodeConfig(w http.ResponseWriter, r *http.Request) {
+	if s.engine == nil {
+		handleError(w, r, s.log, unavailable("the panel has no protocol engine"))
+		return
+	}
+
+	nodeID := r.PathValue("id")
+	node, err := s.nodes.Get(r.Context(), nodeID)
+	if err != nil {
+		if errors.Is(err, nodes.ErrNotFound) {
+			handleError(w, r, s.log, notFound("node not found"))
+			return
+		}
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	config, err := s.installer.ConfigOf(r.Context(), nodeID)
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	target := engines.Target{
+		NodeID:    node.ID,
+		Host:      node.SSHHostName(),
+		Port:      node.SSHPort,
+		User:      node.SSHUser,
+		KnownHost: node.HostKey,
+		OS:        node.OS,
+		Arch:      node.Arch,
+	}
+
+	content, err := s.engine.Render(r.Context(), target, config)
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(content); err != nil {
+		s.log.Error("write the configuration of the node", "error", err)
+	}
+}
+
+// handleNodeEngine reports the engine of the panel and the releases it can
+// install.
+func (s *Server) handleNodeEngine(w http.ResponseWriter, r *http.Request) {
+	if s.engine == nil {
+		handleError(w, r, s.log, unavailable("the panel has no protocol engine"))
+		return
+	}
+
+	body := map[string]any{"name": s.engine.Name()}
+	if versions, err := s.engine.Versions(r.Context()); err == nil {
+		body["versions"] = versions
+	}
+	writeJSON(w, http.StatusOK, body)
+}
+
 // handleListEntryPoints returns the listeners of a node.
 func (s *Server) handleListEntryPoints(w http.ResponseWriter, r *http.Request) {
 	items, err := s.config.EntryPoints(r.Context(), r.URL.Query().Get("nodeId"))
@@ -330,7 +394,7 @@ func (s *Server) handleCreateEntryPoint(w http.ResponseWriter, r *http.Request) 
 		Type    string         `json:"type"`
 		Config  map[string]any `json:"config"`
 		NodeID  string         `json:"nodeId"`
-		Enabled bool           `json:"enabled"`
+		Enabled *bool          `json:"enabled"`
 	}
 	if err := decodeJSON(r, &body); err != nil {
 		handleError(w, r, s.log, err)
@@ -341,13 +405,18 @@ func (s *Server) handleCreateEntryPoint(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	enabled := true
+	if body.Enabled != nil {
+		enabled = *body.Enabled
+	}
+
 	created, err := s.config.CreateEntryPoint(r.Context(), nodes.EntryPoint{
 		Name:    body.Name,
 		Tag:     body.Tag,
 		Type:    body.Type,
 		Config:  body.Config,
 		NodeID:  body.NodeID,
-		Enabled: body.Enabled,
+		Enabled: enabled,
 	})
 	if err != nil {
 		if errors.Is(err, nodes.ErrDuplicateTag) {
@@ -387,7 +456,7 @@ func (s *Server) handleCreateEgress(w http.ResponseWriter, r *http.Request) {
 		Type    string         `json:"type"`
 		Config  map[string]any `json:"config"`
 		NodeID  string         `json:"nodeId"`
-		Enabled bool           `json:"enabled"`
+		Enabled *bool          `json:"enabled"`
 	}
 	if err := decodeJSON(r, &body); err != nil {
 		handleError(w, r, s.log, err)
@@ -398,13 +467,18 @@ func (s *Server) handleCreateEgress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	enabled := true
+	if body.Enabled != nil {
+		enabled = *body.Enabled
+	}
+
 	created, err := s.config.CreateEgress(r.Context(), nodes.Egress{
 		Name:    body.Name,
 		Tag:     body.Tag,
 		Type:    body.Type,
 		Config:  body.Config,
 		NodeID:  body.NodeID,
-		Enabled: body.Enabled,
+		Enabled: enabled,
 	})
 	if err != nil {
 		if errors.Is(err, nodes.ErrDuplicateTag) {

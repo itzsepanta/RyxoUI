@@ -23,6 +23,7 @@ const (
 	CodeNotFound       = "not_found"
 	CodeConflict       = "conflict"
 	CodeRateLimited    = "rate_limited"
+	CodeUnavailable    = "unavailable"
 	CodeInternal       = "internal_error"
 )
 
@@ -130,6 +131,11 @@ func conflict(format string, args ...any) *apiError {
 // forbidden builds a 403 error.
 func forbidden(format string, args ...any) *apiError {
 	return errorf(http.StatusForbidden, CodeForbidden, format, args...)
+}
+
+// unavailable builds a 503 error.
+func unavailable(format string, args ...any) *apiError {
+	return errorf(http.StatusServiceUnavailable, CodeUnavailable, format, args...)
 }
 
 // handleError maps an error to an HTTP response.
