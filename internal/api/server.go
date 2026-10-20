@@ -13,6 +13,7 @@ import (
 	"github.com/ryxoui/ryxoui/internal/authz"
 	"github.com/ryxoui/ryxoui/internal/db"
 	"github.com/ryxoui/ryxoui/internal/events"
+	"github.com/ryxoui/ryxoui/internal/nodes"
 )
 
 // SessionCookieName is the name of the session cookie.
@@ -64,9 +65,13 @@ type Server struct {
 	roles     *authz.Store
 	audit     *audit.Store
 	mfa       *auth.MFAService
+	nodes     *nodes.Store
+	config    *nodes.ConfigStore
+	keys      *nodes.KeyStore
 	outbox    *events.Outbox
 	registry  *events.Registry
 	limiter   *limiter
+	probe     func(ctx context.Context, node nodes.Node, privateKey string) (nodes.ProbeResult, error)
 }
 
 // New builds a server and registers every route.
@@ -93,9 +98,13 @@ func New(cfg Config) (*Server, error) {
 		roles:     authz.NewStore(cfg.DB),
 		audit:     audit.NewStore(cfg.DB),
 		mfa:       auth.NewMFAService(cfg.DB),
+		nodes:     nodes.NewStore(cfg.DB),
+		config:    nodes.NewConfigStore(cfg.DB),
+		keys:      nodes.NewKeyStore(cfg.DB),
 		outbox:    events.NewOutbox(cfg.DB),
 		registry:  events.DefaultRegistry(),
 		limiter:   newLimiter(cfg.RateLimitPerSecond, cfg.RateLimitBurst),
+		probe:     nodes.Probe,
 	}
 
 	if err := srv.roles.EnsureBuiltins(context.Background()); err != nil {

@@ -19,6 +19,9 @@ type Scope string
 const (
 	ScopeOperatorsRead  Scope = "operators:read"
 	ScopeOperatorsWrite Scope = "operators:write"
+	ScopeNodesRead      Scope = "nodes:read"
+	ScopeNodesWrite     Scope = "nodes:write"
+	ScopeNodesInstall   Scope = "nodes:install"
 	ScopeRolesRead      Scope = "roles:read"
 	ScopeRolesWrite     Scope = "roles:write"
 	ScopeSettingsRead   Scope = "settings:read"
@@ -40,6 +43,9 @@ type ScopeInfo struct {
 var scopeRegistry = map[Scope]ScopeInfo{
 	ScopeOperatorsRead:  {"operators:read", "View panel operators and their roles.", "operators"},
 	ScopeOperatorsWrite: {"operators:write", "Create, edit and remove panel operators.", "operators"},
+	ScopeNodesRead:      {"nodes:read", "View nodes, their health and their traffic.", "nodes"},
+	ScopeNodesWrite:     {"nodes:write", "Create, edit and remove nodes.", "nodes"},
+	ScopeNodesInstall:   {"nodes:install", "Install and update the protocol engine on a node.", "nodes"},
 	ScopeRolesRead:      {"roles:read", "View roles and the scope catalogue.", "access"},
 	ScopeRolesWrite:     {"roles:write", "Create, edit and remove roles.", "access"},
 	ScopeSettingsRead:   {"settings:read", "View panel settings.", "settings"},

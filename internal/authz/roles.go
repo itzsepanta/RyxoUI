@@ -55,9 +55,13 @@ var builtinRoles = []Role{
 			string(ScopeOperatorsRead),
 			string(ScopeRolesRead),
 			string(ScopeSettingsRead),
+			string(ScopeSettingsWrite),
 			string(ScopeAuditRead),
 			string(ScopeTokensRead),
 			string(ScopeTokensWrite),
+			string(ScopeNodesRead),
+			string(ScopeNodesWrite),
+			string(ScopeNodesInstall),
 		},
 	},
 	{
@@ -71,6 +75,7 @@ var builtinRoles = []Role{
 			string(ScopeSettingsRead),
 			string(ScopeAuditRead),
 			string(ScopeTokensRead),
+			string(ScopeNodesRead),
 		},
 	},
 }
@@ -83,26 +88,47 @@ type Store struct {
 // NewStore returns a role store.
 func NewStore(q db.Querier) *Store { return &Store{db: q} }
 
-// EnsureBuiltins inserts the builtin roles if they are missing. It is safe
-// to call on every start.
+// EnsureBuiltins inserts the builtin roles if they are missing and keeps
+// their scopes in sync with the catalogue. It is safe to call on every
+// start.
 func (s *Store) EnsureBuiltins(ctx context.Context) error {
 	now := db.Now()
 	for _, role := range builtinRoles {
-		var count int
-		err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM roles WHERE name = ?", role.Name).Scan(&count)
-		if err != nil {
-			return fmt.Errorf("authz: count builtin role %s: %w", role.Name, err)
+		var (
+			roleID  string
+			scopes  string
+			builtin int
+		)
+		err := s.db.QueryRowContext(ctx, "SELECT id, scopes, builtin FROM roles WHERE name = ?", role.Name).
+			Scan(&roleID, &scopes, &builtin)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			_, err = s.db.ExecContext(ctx,
+				`INSERT INTO roles (id, name, base, builtin, description, scopes, user_limit, max_device_limit, max_duration, created_at, updated_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				id.New(), role.Name, role.Base, 1, role.Description, strings.Join(role.Scopes, ","),
+				role.UserLimit, role.MaxDeviceLimit, role.MaxDuration, now, now)
+			if err != nil {
+				return fmt.Errorf("authz: insert builtin role %s: %w", role.Name, err)
+			}
+			continue
+		case err != nil:
+			return fmt.Errorf("authz: read builtin role %s: %w", role.Name, err)
 		}
-		if count > 0 {
+
+		// The role exists: keep its scopes and description in step with the
+		// catalogue so a new release adds its scopes.
+		if builtin == 0 {
+			continue
+		}
+		if scopes == strings.Join(role.Scopes, ",") {
 			continue
 		}
 		_, err = s.db.ExecContext(ctx,
-			`INSERT INTO roles (id, name, base, builtin, description, scopes, user_limit, max_device_limit, max_duration, created_at, updated_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			id.New(), role.Name, role.Base, 1, role.Description, strings.Join(role.Scopes, ","),
-			role.UserLimit, role.MaxDeviceLimit, role.MaxDuration, now, now)
+			"UPDATE roles SET scopes = ?, description = ?, updated_at = ? WHERE id = ?",
+			strings.Join(role.Scopes, ","), role.Description, now, roleID)
 		if err != nil {
-			return fmt.Errorf("authz: insert builtin role %s: %w", role.Name, err)
+			return fmt.Errorf("authz: update builtin role %s: %w", role.Name, err)
 		}
 	}
 	return nil

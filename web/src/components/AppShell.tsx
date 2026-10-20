@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { Badge, Button, cn } from "@/components/ui";
 
 const navigation = [
+  { to: "/nodes", key: "nav.nodes" },
   { to: "/operators", key: "nav.operators" },
   { to: "/roles", key: "nav.roles" },
   { to: "/audit", key: "nav.audit" },

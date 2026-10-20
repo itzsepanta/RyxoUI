@@ -58,6 +58,33 @@ func (s *Server) routeTable() []Route {
 		{Method: http.MethodGet, Path: "/api/event-types", Summary: "List the event catalogue.", Scope: authz.ScopeRolesRead, Handler: s.handleListEventTypes},
 		{Method: http.MethodGet, Path: "/api/panel/info", Summary: "Describe the panel build.", Scope: authz.ScopeSettingsRead, Handler: s.handlePanelInfo},
 
+		// Nodes.
+		{Method: http.MethodGet, Path: "/api/nodes", Summary: "List the nodes.", Scope: authz.ScopeNodesRead, Handler: s.handleListNodes},
+		{Method: http.MethodPost, Path: "/api/nodes", Summary: "Register a node.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateNode},
+		{Method: http.MethodGet, Path: "/api/nodes/{id}", Summary: "Read one node.", Scope: authz.ScopeNodesRead, Handler: s.handleGetNode},
+		{Method: http.MethodPut, Path: "/api/nodes/{id}", Summary: "Change a node.", Scope: authz.ScopeNodesWrite, Handler: s.handleUpdateNode},
+		{Method: http.MethodDelete, Path: "/api/nodes/{id}", Summary: "Remove a node.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteNode},
+		{Method: http.MethodGet, Path: "/api/nodes/{id}/health", Summary: "Read the health of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeHealth},
+		{Method: http.MethodGet, Path: "/api/nodes/{id}/usage", Summary: "Read the traffic of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeUsage},
+		{Method: http.MethodPost, Path: "/api/nodes/{id}/probe", Summary: "Ask a node about itself over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleProbeNode},
+
+		// Keys of the panel.
+		{Method: http.MethodGet, Path: "/api/ssh-keys", Summary: "List the keys of the panel.", Scope: authz.ScopeNodesRead, Handler: s.handleListKeys},
+		{Method: http.MethodPost, Path: "/api/ssh-keys", Summary: "Generate a key for the panel.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateKey},
+		{Method: http.MethodDelete, Path: "/api/ssh-keys/{id}", Summary: "Remove a key of the panel.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteKey},
+
+		// Configuration of the nodes.
+		{Method: http.MethodGet, Path: "/api/entrypoints", Summary: "List the listeners.", Scope: authz.ScopeNodesRead, Handler: s.handleListEntryPoints},
+		{Method: http.MethodPost, Path: "/api/entrypoints", Summary: "Create a listener.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateEntryPoint},
+		{Method: http.MethodDelete, Path: "/api/entrypoints/{id}", Summary: "Remove a listener.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteEntryPoint},
+		{Method: http.MethodGet, Path: "/api/egresses", Summary: "List the outgoing connections.", Scope: authz.ScopeNodesRead, Handler: s.handleListEgresses},
+		{Method: http.MethodPost, Path: "/api/egresses", Summary: "Create an outgoing connection.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateEgress},
+		{Method: http.MethodGet, Path: "/api/endpoints", Summary: "List the destinations.", Scope: authz.ScopeNodesRead, Handler: s.handleListEndpoints},
+		{Method: http.MethodPost, Path: "/api/endpoints", Summary: "Create a destination.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateEndpoint},
+		{Method: http.MethodGet, Path: "/api/templates", Summary: "List the templates.", Scope: authz.ScopeNodesRead, Handler: s.handleListTemplates},
+		{Method: http.MethodPost, Path: "/api/templates", Summary: "Create a template.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateTemplate},
+		{Method: http.MethodDelete, Path: "/api/templates/{id}", Summary: "Remove a template.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteTemplate},
+
 		// Documentation.
 		{Method: http.MethodGet, Path: "/api/openapi.json", Summary: "The OpenAPI description of this API.", Public: true, Handler: s.handleOpenAPIJSON},
 		{Method: http.MethodGet, Path: "/api/openapi.yaml", Summary: "The OpenAPI description of this API as YAML.", Public: true, Handler: s.handleOpenAPIYAML},

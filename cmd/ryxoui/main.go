@@ -20,6 +20,7 @@ import (
 	"github.com/ryxoui/ryxoui/internal/api"
 	"github.com/ryxoui/ryxoui/internal/db"
 	"github.com/ryxoui/ryxoui/internal/events"
+	"github.com/ryxoui/ryxoui/internal/nodes"
 	"github.com/ryxoui/ryxoui/internal/update"
 	"github.com/ryxoui/ryxoui/internal/web"
 
@@ -315,6 +316,18 @@ func serve(args []string) error {
 	go func() {
 		if err := dispatcher.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			logger.Error("dispatcher stopped", "error", err)
+		}
+	}()
+
+	// The collector keeps the state of the nodes fresh by asking them over
+	// SSH how they are doing.
+	collector := nodes.NewCollector(nodes.NewStore(handle), nodes.NewKeyStore(handle), nodes.Probe, nodes.CollectorOptions{
+		Interval: 5 * time.Minute,
+		Logger:   logger,
+	})
+	go func() {
+		if err := collector.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("collector stopped", "error", err)
 		}
 	}()
 

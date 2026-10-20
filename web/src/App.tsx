@@ -10,6 +10,8 @@ import { TokensPage } from "@/pages/Tokens";
 import { SettingsPage } from "@/pages/Settings";
 import { UpdatesPage } from "@/pages/Updates";
 import { SecurityPage } from "@/pages/Security";
+import { NodesPage } from "@/pages/Nodes";
+import { NodeDetailPage } from "@/pages/NodeDetail";
 import { Spinner } from "@/components/ui";
 
 export function App() {
@@ -36,6 +38,8 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/operators" replace />} />
         <Route path="/operators" element={<OperatorsPage />} />
+        <Route path="/nodes" element={<NodesPage />} />
+        <Route path="/nodes/:id" element={<NodeDetailPage />} />
         <Route path="/roles" element={<RolesPage />} />
         <Route path="/audit" element={<AuditPage />} />
         <Route path="/tokens" element={<TokensPage />} />
