@@ -16,3 +16,7 @@ web/dist/
 .idea/
 .vscode/
 *.swp
+
+# The log of a panel that runs in the working copy
+ryxoui.log
+ryxoui.err.log
