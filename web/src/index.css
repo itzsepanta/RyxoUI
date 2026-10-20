@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 20% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 20% 12%;
+    --primary: 250 84% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 16% 96%;
+    --secondary-foreground: 224 20% 20%;
+    --muted: 220 16% 96%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 220 16% 94%;
+    --accent-foreground: 224 20% 16%;
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 88%;
+    --input: 220 14% 88%;
+    --ring: 250 84% 58%;
+  }
+
+  .dark {
+    --background: 228 24% 8%;
+    --foreground: 210 20% 94%;
+    --card: 228 24% 11%;
+    --card-foreground: 210 20% 94%;
+    --primary: 250 84% 68%;
+    --primary-foreground: 228 30% 10%;
+    --secondary: 228 18% 17%;
+    --secondary-foreground: 210 20% 94%;
+    --muted: 228 18% 17%;
+    --muted-foreground: 218 12% 64%;
+    --accent: 228 18% 20%;
+    --accent-foreground: 210 20% 94%;
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 18% 20%;
+    --input: 228 18% 20%;
+    --ring: 250 84% 68%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  [dir="rtl"] {
+    font-family: ui-sans-serif, "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
+  }
+}

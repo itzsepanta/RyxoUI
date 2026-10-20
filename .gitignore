@@ -1,0 +1,18 @@
+# Build artefacts
+bin/
+*.exe
+*.db
+*.db-shm
+*.db-wal
+
+# Frontend
+web/node_modules/
+web/dist/
+
+# The embedded frontend build output is committed so the Go binary can be
+# built without Node installed.
+
+# Editors
+.idea/
+.vscode/
+*.swp

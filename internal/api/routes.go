@@ -1,0 +1,58 @@
+package api
+
+import (
+	"net/http"
+
+	"github.com/ryxoui/ryxoui/internal/authz"
+)
+
+// routeTable builds the route table. Every entry declares the scope it
+// needs so that authorisation cannot be forgotten.
+func (s *Server) routeTable() []Route {
+	return []Route{
+		// Setup and authentication.
+		{Method: http.MethodGet, Path: "/api/setup", Summary: "Report whether the panel is initialised.", Public: true, Handler: s.handleSetupState},
+		{Method: http.MethodPost, Path: "/api/setup", Summary: "Create the first owner account.", Public: true, Handler: s.handleSetup},
+		{Method: http.MethodPost, Path: "/api/login", Summary: "Sign in with a username and password.", Public: true, Handler: s.handleLogin},
+		{Method: http.MethodPost, Path: "/api/login/mfa", Summary: "Complete a sign in with a second factor.", Public: true, Handler: s.handleLoginMFA},
+		{Method: http.MethodPost, Path: "/api/logout", Summary: "End the current session.", Handler: s.handleLogout},
+
+		// Current operator.
+		{Method: http.MethodGet, Path: "/api/me", Summary: "Describe the signed in operator.", Handler: s.handleMe},
+		{Method: http.MethodGet, Path: "/api/me/sessions", Summary: "List the sessions of the signed in operator.", Handler: s.handleMySessions},
+		{Method: http.MethodDelete, Path: "/api/me/sessions/{id}", Summary: "Revoke one of your sessions.", Handler: s.handleRevokeSession},
+
+		// Operators.
+		{Method: http.MethodGet, Path: "/api/operators", Summary: "List panel operators.", Scope: authz.ScopeOperatorsRead, Handler: s.handleListOperators},
+		{Method: http.MethodPost, Path: "/api/operators", Summary: "Create an operator.", Scope: authz.ScopeOperatorsWrite, Handler: s.handleCreateOperator},
+		{Method: http.MethodGet, Path: "/api/operators/{id}", Summary: "Read one operator.", Scope: authz.ScopeOperatorsRead, Handler: s.handleGetOperator},
+		{Method: http.MethodPut, Path: "/api/operators/{id}", Summary: "Update an operator.", Scope: authz.ScopeOperatorsWrite, Handler: s.handleUpdateOperator},
+		{Method: http.MethodDelete, Path: "/api/operators/{id}", Summary: "Remove an operator.", Scope: authz.ScopeOperatorsWrite, Handler: s.handleDeleteOperator},
+
+		// Roles.
+		{Method: http.MethodGet, Path: "/api/roles", Summary: "List roles.", Scope: authz.ScopeRolesRead, Handler: s.handleListRoles},
+		{Method: http.MethodPost, Path: "/api/roles", Summary: "Create a role.", Scope: authz.ScopeRolesWrite, Handler: s.handleCreateRole},
+		{Method: http.MethodGet, Path: "/api/roles/{id}", Summary: "Read one role.", Scope: authz.ScopeRolesRead, Handler: s.handleGetRole},
+		{Method: http.MethodPut, Path: "/api/roles/{id}", Summary: "Update a role.", Scope: authz.ScopeRolesWrite, Handler: s.handleUpdateRole},
+		{Method: http.MethodDelete, Path: "/api/roles/{id}", Summary: "Remove a role.", Scope: authz.ScopeRolesWrite, Handler: s.handleDeleteRole},
+		{Method: http.MethodGet, Path: "/api/scopes", Summary: "List the scope catalogue.", Scope: authz.ScopeRolesRead, Handler: s.handleListScopes},
+
+		// Settings.
+		{Method: http.MethodGet, Path: "/api/settings", Summary: "List panel settings.", Scope: authz.ScopeSettingsRead, Handler: s.handleListSettings},
+		{Method: http.MethodPut, Path: "/api/settings/{key}", Summary: "Change a panel setting.", Scope: authz.ScopeSettingsWrite, Handler: s.handleUpdateSetting},
+
+		// API tokens.
+		{Method: http.MethodGet, Path: "/api/tokens", Summary: "List your API tokens.", Scope: authz.ScopeTokensRead, Handler: s.handleListTokens},
+		{Method: http.MethodPost, Path: "/api/tokens", Summary: "Create an API token.", Scope: authz.ScopeTokensWrite, Handler: s.handleCreateToken},
+		{Method: http.MethodDelete, Path: "/api/tokens/{id}", Summary: "Revoke an API token.", Scope: authz.ScopeTokensWrite, Handler: s.handleDeleteToken},
+
+		// Observability.
+		{Method: http.MethodGet, Path: "/api/audit", Summary: "Read the audit log.", Scope: authz.ScopeAuditRead, Handler: s.handleListAudit},
+		{Method: http.MethodGet, Path: "/api/event-types", Summary: "List the event catalogue.", Scope: authz.ScopeRolesRead, Handler: s.handleListEventTypes},
+		{Method: http.MethodGet, Path: "/api/panel/info", Summary: "Describe the panel build.", Scope: authz.ScopeSettingsRead, Handler: s.handlePanelInfo},
+
+		// Documentation.
+		{Method: http.MethodGet, Path: "/api/openapi.json", Summary: "The OpenAPI description of this API.", Public: true, Handler: s.handleOpenAPIJSON},
+		{Method: http.MethodGet, Path: "/api/openapi.yaml", Summary: "The OpenAPI description of this API as YAML.", Public: true, Handler: s.handleOpenAPIYAML},
+	}
+}
