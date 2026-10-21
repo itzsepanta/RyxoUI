@@ -36,6 +36,14 @@ func (e *fakeEngine) Apply(ctx context.Context, target engines.Target, config en
 	return nil
 }
 
+func (e *fakeEngine) Uninstall(ctx context.Context, target engines.Target) error {
+	return nil
+}
+
+func (e *fakeEngine) Current(ctx context.Context, target engines.Target) ([]byte, error) {
+	return []byte(`{"inbounds":[]}`), nil
+}
+
 func (e *fakeEngine) Health(ctx context.Context, target engines.Target) (engines.Health, error) {
 	return engines.Health{Running: true}, nil
 }

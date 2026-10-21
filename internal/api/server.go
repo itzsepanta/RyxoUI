@@ -17,6 +17,7 @@ import (
 	"github.com/ryxoui/ryxoui/internal/events"
 	"github.com/ryxoui/ryxoui/internal/nodes"
 	"github.com/ryxoui/ryxoui/internal/update"
+	"github.com/ryxoui/ryxoui/internal/webhooks"
 )
 
 // SessionCookieName is the name of the session cookie.
@@ -87,6 +88,8 @@ type Server struct {
 	keys      *nodes.KeyStore
 	jobs      *nodes.JobStore
 	presets   *nodes.PresetStore
+	alerts    *nodes.AlertStore
+	webhooks  *webhooks.Store
 	installer *nodes.Installer
 	outbox    *events.Outbox
 	registry  *events.Registry
@@ -126,6 +129,8 @@ func New(cfg Config) (*Server, error) {
 		keys:      nodes.NewKeyStore(cfg.DB),
 		jobs:      nodes.NewJobStore(cfg.DB),
 		presets:   nodes.NewPresetStore(cfg.DB),
+		alerts:    nodes.NewAlertStore(cfg.DB),
+		webhooks:  webhooks.NewStore(cfg.DB),
 		outbox:    events.NewOutbox(cfg.DB),
 		registry:  events.DefaultRegistry(),
 		limiter:   newLimiter(cfg.RateLimitPerSecond, cfg.RateLimitBurst),

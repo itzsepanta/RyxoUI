@@ -182,6 +182,28 @@ func (e *Engine) Apply(ctx context.Context, target engines.Target, config engine
 	return nil
 }
 
+// Uninstall removes the engine from a node.
+//
+// The unit is stopped and disabled, the unit file and the directory of the
+// engine are removed. The node itself stays.
+func (e *Engine) Uninstall(ctx context.Context, target engines.Target) error {
+	session, err := e.session(ctx, target)
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	script := fmt.Sprintf("set -e`nsystemctl disable --now %s || true`nrm -f %s`nrm -rf %s`nsystemctl daemon-reload || true`nsystemctl reset-failed || true",
+		serviceName(target), unitPath(target), directory(target))
+
+	if _, stderr, code, err := session.Run(ctx, script); err != nil {
+		return fmt.Errorf("xray: remove the engine: %w", err)
+	} else if code != 0 {
+		return fmt.Errorf("xray: remove the engine: %s", strings.TrimSpace(stderr))
+	}
+	return nil
+}
+
 // Health reports the state of the engine on a node.
 func (e *Engine) Health(ctx context.Context, target engines.Target) (engines.Health, error) {
 	session, err := e.session(ctx, target)
@@ -203,6 +225,24 @@ func (e *Engine) Health(ctx context.Context, target engines.Target) (engines.Hea
 		health.Version = strings.TrimSpace(stdout)
 	}
 	return health, nil
+}
+
+// Current returns the configuration the engine runs now on a node.
+func (e *Engine) Current(ctx context.Context, target engines.Target) ([]byte, error) {
+	session, err := e.session(ctx, target)
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	stdout, stderr, code, err := session.Run(ctx, "cat "+configPath(target))
+	if err != nil {
+		return nil, fmt.Errorf("xray: read the configuration: %w", err)
+	}
+	if code != 0 {
+		return nil, fmt.Errorf("xray: read the configuration: %s", strings.TrimSpace(stderr))
+	}
+	return []byte(stdout), nil
 }
 
 // Users returns the clients the engine knows on a node.

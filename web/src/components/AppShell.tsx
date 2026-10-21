@@ -13,6 +13,8 @@ const navigation = [
   { to: "/tokens", key: "nav.tokens" },
   { to: "/settings", key: "nav.settings" },
   { to: "/tools", key: "nav.tools" },
+  { to: "/alerts", key: "nav.alerts" },
+  { to: "/docs", key: "nav.docs" },
   { to: "/updates", key: "nav.updates" },
   { to: "/security", key: "nav.security" },
 ] as const;

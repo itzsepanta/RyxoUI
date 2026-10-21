@@ -67,12 +67,17 @@ func (s *Server) routeTable() []Route {
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/health", Summary: "Read the health of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeHealth},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/usage", Summary: "Read the traffic of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeUsage},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/config", Summary: "Render the configuration of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeConfig},
+		{Method: http.MethodGet, Path: "/api/nodes/{id}/config/diff", Summary: "Compare the configuration of a node with the one it would run.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeConfigDiff},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/logs", Summary: "Read the log of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeLogs},
+		{Method: http.MethodGet, Path: "/api/nodes/{id}/alerts", Summary: "Read the warnings of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeAlerts},
+		{Method: http.MethodDelete, Path: "/api/nodes/{id}/alerts", Summary: "End the warnings of a node.", Scope: authz.ScopeNodesWrite, Handler: s.handleClearAlerts},
+		{Method: http.MethodGet, Path: "/api/alerts", Summary: "Read the warnings of every node.", Scope: authz.ScopeNodesRead, Handler: s.handleAlerts},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/logs/stream", Summary: "Follow the log of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeLogStream},
 		{Method: http.MethodGet, Path: "/api/engines", Summary: "Describe the protocol engine of the panel.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeEngine},
 		{Method: http.MethodPost, Path: "/api/nodes/{id}/probe", Summary: "Ask a node about itself over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleProbeNode},
 		{Method: http.MethodPost, Path: "/api/nodes/{id}/install", Summary: "Set a node up over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleInstallNode},
 		{Method: http.MethodPost, Path: "/api/nodes/{id}/apply", Summary: "Write the configuration of a node on the node.", Scope: authz.ScopeNodesInstall, Handler: s.handleApplyNode},
+		{Method: http.MethodPost, Path: "/api/nodes/{id}/uninstall", Summary: "Remove the protocol engine from a node.", Scope: authz.ScopeNodesInstall, Handler: s.handleUninstallNode},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/install", Summary: "Read the install jobs of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleInstallJobs},
 
 		// Keys of the panel.
@@ -101,6 +106,12 @@ func (s *Server) routeTable() []Route {
 		{Method: http.MethodGet, Path: "/api/presets", Summary: "List the presets of the panel.", Scope: authz.ScopeNodesRead, Handler: s.handleListPresets},
 		{Method: http.MethodPost, Path: "/api/presets", Summary: "Create a preset.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreatePreset},
 		{Method: http.MethodDelete, Path: "/api/presets/{id}", Summary: "Remove a preset.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeletePreset},
+
+		// Webhooks of the panel.
+		{Method: http.MethodGet, Path: "/api/webhooks", Summary: "List the webhooks of the panel.", Scope: authz.ScopeSettingsRead, Handler: s.handleListWebhooks},
+		{Method: http.MethodPost, Path: "/api/webhooks", Summary: "Create a webhook.", Scope: authz.ScopeSettingsWrite, Handler: s.handleCreateWebhook},
+		{Method: http.MethodPut, Path: "/api/webhooks/{id}", Summary: "Change a webhook.", Scope: authz.ScopeSettingsWrite, Handler: s.handleUpdateWebhook},
+		{Method: http.MethodDelete, Path: "/api/webhooks/{id}", Summary: "Remove a webhook.", Scope: authz.ScopeSettingsWrite, Handler: s.handleDeleteWebhook},
 
 		// Tools of the panel.
 		{Method: http.MethodPost, Path: "/api/keys/x25519", Summary: "Make a key pair of the curve X25519.", Scope: authz.ScopeToolsWrite, Handler: s.handleX25519Key},

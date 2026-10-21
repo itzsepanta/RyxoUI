@@ -24,6 +24,7 @@ import (
 	"github.com/ryxoui/ryxoui/internal/nodes"
 	"github.com/ryxoui/ryxoui/internal/update"
 	"github.com/ryxoui/ryxoui/internal/web"
+	"github.com/ryxoui/ryxoui/internal/webhooks"
 
 	// The protocol engines the panel knows.
 	_ "github.com/ryxoui/ryxoui/internal/engines/xray"
@@ -321,7 +322,9 @@ func serve(args []string) error {
 	}()
 
 	// The event dispatcher moves events from the outbox to the subscribers.
-	dispatcher := events.NewDispatcher(events.NewOutbox(handle), handle, nil, events.DispatcherOptions{
+	var subscribers []events.Subscriber
+	subscribers = append(subscribers, webhooks.NewSubscriber(webhooks.NewStore(handle), nil, logger))
+	dispatcher := events.NewDispatcher(events.NewOutbox(handle), handle, subscribers, events.DispatcherOptions{
 		Interval: 2 * time.Second,
 		Logger:   logger,
 	})
@@ -333,7 +336,7 @@ func serve(args []string) error {
 
 	// The collector keeps the state of the nodes fresh by asking them over
 	// SSH how they are doing.
-	collector := nodes.NewCollector(nodes.NewStore(handle), nodes.NewKeyStore(handle), nodes.Probe, nodes.CollectorOptions{
+	collector := nodes.NewCollector(nodes.NewStore(handle), nodes.NewKeyStore(handle), nodes.NewAlertStore(handle), nodes.Probe, nodes.CollectorOptions{
 		Interval: 5 * time.Minute,
 		Logger:   logger,
 	})

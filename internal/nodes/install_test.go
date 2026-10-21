@@ -38,7 +38,7 @@ func TestTheInstallerSetsTheNodeUp(t *testing.T) {
 		return ProbeResult{OS: "linux", Arch: "x86_64", HostKey: "pinned"}, nil
 	}, InstallerOptions{})
 
-	job, err := installer.Run(context.Background(), node, "the password of the node")
+	job, err := installer.Run(context.Background(), node, "the password of the node", "")
 	if err != nil {
 		t.Fatalf("run the installer: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestTheInstallerReportsAFailure(t *testing.T) {
 
 	installer := NewInstaller(store, keys, jobs, NewConfigStore(store.db), nil, InstallerOptions{Timeout: 5 * time.Second})
 
-	job, err := installer.Run(context.Background(), node, "wrong")
+	job, err := installer.Run(context.Background(), node, "wrong", "")
 	if err == nil {
 		t.Fatal("the installer must report the failure")
 	}

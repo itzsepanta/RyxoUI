@@ -112,6 +112,10 @@ type Config struct {
 	Users []User
 	// LogLevel is the level the engine writes its log with.
 	LogLevel string
+	// Core holds the settings that the template of the node brings.
+	Core map[string]any
+	// Route holds the routing that the template of the node brings.
+	Route map[string]any
 }
 
 // Engine is a protocol engine the panel can drive on a node.
@@ -131,8 +135,14 @@ type Engine interface {
 	// Apply writes the configuration on a node and restarts the engine.
 	Apply(ctx context.Context, target Target, config Config) error
 
+	// Uninstall removes the engine from a node.
+	Uninstall(ctx context.Context, target Target) error
+
 	// Health reports the state of the engine on a node.
 	Health(ctx context.Context, target Target) (Health, error)
+
+	// Current returns the configuration the engine runs now on a node.
+	Current(ctx context.Context, target Target) ([]byte, error)
 
 	// Users returns the clients the engine knows on a node.
 	Users(ctx context.Context, target Target) ([]User, error)

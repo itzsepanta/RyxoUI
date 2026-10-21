@@ -8,6 +8,7 @@ import (
 	"github.com/ryxoui/ryxoui/internal/audit"
 	"github.com/ryxoui/ryxoui/internal/authz"
 	"github.com/ryxoui/ryxoui/internal/db"
+	"github.com/ryxoui/ryxoui/internal/diff"
 	"github.com/ryxoui/ryxoui/internal/engines"
 	"github.com/ryxoui/ryxoui/internal/nodes"
 )
@@ -332,7 +333,7 @@ func (s *Server) handleNodeConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, err := s.installer.ConfigOf(r.Context(), nodeID)
+	config, err := s.installer.ConfigOf(r.Context(), node)
 	if err != nil {
 		handleError(w, r, s.log, err)
 		return
@@ -359,6 +360,56 @@ func (s *Server) handleNodeConfig(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(content); err != nil {
 		s.log.Error("write the configuration of the node", "error", err)
 	}
+}
+
+// handleNodeConfigDiff tells the configuration a node runs now apart from the
+// one it would run, so an operator sees what a change does.
+func (s *Server) handleNodeConfigDiff(w http.ResponseWriter, r *http.Request) {
+	if s.engine == nil {
+		handleError(w, r, s.log, unavailable("the panel has no protocol engine"))
+		return
+	}
+
+	node, key, ok := s.nodeWithKey(w, r)
+	if !ok {
+		return
+	}
+
+	config, err := s.installer.ConfigOf(r.Context(), node)
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	target := engines.Target{
+		NodeID:     node.ID,
+		Host:       node.SSHHostName(),
+		Port:       node.SSHPort,
+		User:       node.SSHUser,
+		PrivateKey: key,
+		KnownHost:  node.HostKey,
+		OS:         node.OS,
+		Arch:       node.Arch,
+	}
+
+	next, err := s.engine.Render(r.Context(), target, config)
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	current, err := s.engine.Current(r.Context(), target)
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"changed": diff.Changed(string(current), string(next)),
+		"current": string(current),
+		"next":    string(next),
+		"lines":   diff.Lines(string(current), string(next)),
+	})
 }
 
 // handleNodeEngine reports the engine of the panel and the releases it can
@@ -617,7 +668,7 @@ func (s *Server) handleApplyNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config, err := s.installer.ConfigOf(r.Context(), nodeID)
+	config, err := s.installer.ConfigOf(r.Context(), node)
 	if err != nil {
 		handleError(w, r, s.log, err)
 		return

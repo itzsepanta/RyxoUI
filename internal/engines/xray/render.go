@@ -68,7 +68,23 @@ func (e *Engine) Render(ctx context.Context, target engines.Target, config engin
 		"outbounds": outbounds,
 	}
 
-	if rules := routingRules(config); len(rules) > 0 {
+	// The settings of the template of the node are the base of the
+	// configuration, so they come first and the panel has the last word.
+	for key, value := range config.Core {
+		document[key] = value
+	}
+
+	rules := routingRules(config)
+	if route, ok := config.Route["rules"].([]any); ok {
+		for _, item := range route {
+			rule, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			rules = append(rules, rule)
+		}
+	}
+	if len(rules) > 0 {
 		document["routing"] = map[string]any{"rules": rules}
 	}
 

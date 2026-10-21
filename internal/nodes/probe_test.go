@@ -161,7 +161,7 @@ func TestTheCollectorRecordsTheAnswer(t *testing.T) {
 		t.Fatalf("create the node: %v", err)
 	}
 
-	collector := NewCollector(store, keys, func(ctx context.Context, node Node, privateKey string) (ProbeResult, error) {
+	collector := NewCollector(store, keys, NewAlertStore(store.db), func(ctx context.Context, node Node, privateKey string) (ProbeResult, error) {
 		return ProbeResult{OS: "linux", Arch: "x86_64", MemTotal: 100, MemUsed: 40, HostKey: "pinned"}, nil
 	}, CollectorOptions{Logger: nil})
 
@@ -214,7 +214,7 @@ func TestTheCollectorReportsAFailure(t *testing.T) {
 		t.Fatalf("create the node: %v", err)
 	}
 
-	collector := NewCollector(store, keys, func(ctx context.Context, node Node, privateKey string) (ProbeResult, error) {
+	collector := NewCollector(store, keys, NewAlertStore(store.db), func(ctx context.Context, node Node, privateKey string) (ProbeResult, error) {
 		return ProbeResult{}, fmt.Errorf("the node is gone")
 	}, CollectorOptions{})
 

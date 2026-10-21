@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Activity, ArrowLeft, KeyRound, PackageCheck, Upload } from "lucide-react";
+import { Activity, ArrowLeft, GitCompare, KeyRound, PackageCheck, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { api, ApiError } from "@/lib/api";
 import { NodeConfigCard } from "@/components/NodeConfigCard";
 import { NodeLogCard } from "@/components/NodeLogCard";
-import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Spinner, Table, Td, Th } from "@/components/ui";
+import { NodeAlertsCard } from "@/pages/Alerts";
+import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Select, Spinner, Table, Td, Th } from "@/components/ui";
 import type { Node } from "@/pages/Nodes";
 
 interface HealthSample {
@@ -52,11 +53,22 @@ interface InstallJob {
   finishedAt: number;
 }
 
+interface DiffLine {
+  kind: string;
+  text: string;
+}
+
+interface ConfigDifference {
+  changed: boolean;
+  current: string;
+  next: string;
+  lines: DiffLine[];
+}
+
 interface EngineInfo {
   name: string;
   versions?: { version: string; asset: string }[];
 }
-
 export function NodeDetailPage() {
   const { id = "" } = useParams();
   const { t } = useI18n();
@@ -68,11 +80,15 @@ export function NodeDetailPage() {
   const [jobs, setJobs] = useState<InstallJob[]>([]);
   const [config, setConfig] = useState("");
   const [engine, setEngine] = useState<EngineInfo | null>(null);
+  const [version, setVersion] = useState("");
   const [password, setPassword] = useState("");
+  const [uninstalling, setUninstalling] = useState(false);
   const [loading, setLoading] = useState(true);
   const [probing, setProbing] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [comparing, setComparing] = useState(false);
+  const [difference, setDifference] = useState<ConfigDifference | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -152,7 +168,7 @@ export function NodeDetailPage() {
     setInstalling(true);
     setError(null);
     try {
-      await api.post(`/api/nodes/${id}/install`, { password });
+      await api.post(`/api/nodes/${id}/install`, { password, engineVersion: version });
       setPassword("");
       await load();
       await follow();
@@ -160,6 +176,19 @@ export function NodeDetailPage() {
       setError(err instanceof ApiError ? err.message : t("common.error"));
     } finally {
       setInstalling(false);
+    }
+  }
+
+  async function uninstall() {
+    setUninstalling(true);
+    setError(null);
+    try {
+      await api.post(`/api/nodes/${id}/uninstall`);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("common.error"));
+    } finally {
+      setUninstalling(false);
     }
   }
 
@@ -183,11 +212,25 @@ export function NodeDetailPage() {
     setError(null);
     try {
       await api.post(`/api/nodes/${id}/apply`);
+      setDifference(null);
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));
     } finally {
       setApplying(false);
+    }
+  }
+
+  async function compare() {
+    setComparing(true);
+    setError(null);
+    try {
+      const response = await api.get<ConfigDifference>(`/api/nodes/${id}/config/diff`);
+      setDifference(response);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("common.error"));
+    } finally {
+      setComparing(false);
     }
   }
 
@@ -268,6 +311,8 @@ export function NodeDetailPage() {
 
       <NodeConfigCard nodeId={id} onChanged={() => void load()} />
 
+      <NodeAlertsCard nodeId={id} />
+
       <NodeLogCard nodeId={id} />
 
       <Card>
@@ -278,7 +323,16 @@ export function NodeDetailPage() {
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge>{engine?.name ?? "—"}</Badge>
             <span>{t("nodes.configHint")}</span>
-            <Button className="ms-auto" variant="outline" disabled={applying} onClick={apply}>
+            <Button
+              className="ms-auto"
+              variant="outline"
+              disabled={comparing}
+              onClick={() => void compare()}
+            >
+              <GitCompare className="h-4 w-4" />
+              {comparing ? t("nodes.comparing") : t("nodes.compare")}
+            </Button>
+            <Button variant="outline" disabled={applying} onClick={apply}>
               <Upload className="h-4 w-4" />
               {applying ? t("nodes.applying") : t("nodes.apply")}
             </Button>
@@ -288,6 +342,31 @@ export function NodeDetailPage() {
           ) : (
             <p className="text-muted-foreground">{t("common.empty")}</p>
           )}
+
+          {difference ? (
+            <div className="grid gap-2">
+              <p className="text-xs text-muted-foreground">
+                {difference.changed ? t("nodes.diffChanged") : t("nodes.diffSame")}
+              </p>
+              <pre className="max-h-96 overflow-auto rounded-md bg-muted/40 p-3 text-xs leading-5">
+                {difference.lines.map((line, index) => (
+                  <div
+                    key={index}
+                    className={
+                      line.kind === "added"
+                        ? "text-emerald-600"
+                        : line.kind === "removed"
+                          ? "text-destructive"
+                          : "text-muted-foreground"
+                    }
+                  >
+                    {line.kind === "added" ? "+ " : line.kind === "removed" ? "- " : "  "}
+                    {line.text}
+                  </div>
+                ))}
+              </pre>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -313,8 +392,29 @@ export function NodeDetailPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+            <Select
+              className="w-36"
+              value={version}
+              onChange={(event) => setVersion(event.target.value)}
+            >
+              <option value="">{t("nodes.newestVersion")}</option>
+              {(engine?.versions ?? []).map((item) => (
+                <option key={item.version} value={item.version}>
+                  {item.version}
+                </option>
+              ))}
+            </Select>
             <Button type="submit" disabled={installing || password.trim() === ""}>
               {installing ? t("nodes.installing") : t("nodes.install")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="ms-auto"
+              disabled={uninstalling}
+              onClick={() => void uninstall()}
+            >
+              {uninstalling ? t("nodes.uninstalling") : t("nodes.uninstall")}
             </Button>
           </form>
           <p className="text-xs text-muted-foreground">{t("nodes.installHint")}</p>

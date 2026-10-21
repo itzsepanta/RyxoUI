@@ -185,7 +185,7 @@ func NewInstaller(store *Store, keys *KeyStore, jobs *JobStore, config *ConfigSt
 
 // Start creates a job and runs it in the background. The job is returned
 // right away, so the caller can follow it while it works.
-func (i *Installer) Start(ctx context.Context, node Node, password string) (InstallJob, error) {
+func (i *Installer) Start(ctx context.Context, node Node, password, version string) (InstallJob, error) {
 	job, err := i.jobs.Create(ctx, node.ID)
 	if err != nil {
 		return InstallJob{}, err
@@ -193,7 +193,7 @@ func (i *Installer) Start(ctx context.Context, node Node, password string) (Inst
 	i.reset(job.ID)
 
 	go func() {
-		if _, err := i.run(context.WithoutCancel(ctx), job, node, password); err != nil {
+		if _, err := i.run(context.WithoutCancel(ctx), job, node, password, version); err != nil {
 			i.logger.Error("the install job failed", "job", job.ID, "error", err)
 		}
 	}()
@@ -201,17 +201,17 @@ func (i *Installer) Start(ctx context.Context, node Node, password string) (Inst
 }
 
 // Run sets a node up and waits for the end of the work.
-func (i *Installer) Run(ctx context.Context, node Node, password string) (InstallJob, error) {
+func (i *Installer) Run(ctx context.Context, node Node, password, version string) (InstallJob, error) {
 	job, err := i.jobs.Create(ctx, node.ID)
 	if err != nil {
 		return InstallJob{}, err
 	}
 	i.reset(job.ID)
-	return i.run(ctx, job, node, password)
+	return i.run(ctx, job, node, password, version)
 }
 
 // run does the work of a job.
-func (i *Installer) run(ctx context.Context, job InstallJob, node Node, password string) (InstallJob, error) {
+func (i *Installer) run(ctx context.Context, job InstallJob, node Node, password, version string) (InstallJob, error) {
 	job.Status = JobRunning
 	job.Step = "connect"
 	job.Progress = 5
@@ -294,7 +294,7 @@ func (i *Installer) run(ctx context.Context, job InstallJob, node Node, password
 		if err := i.jobs.Update(ctx, job); err != nil {
 			return InstallJob{}, err
 		}
-		if err := i.installEngine(stepCtx, node, key.PrivateKey); err != nil {
+		if err := i.installEngine(stepCtx, node, key.PrivateKey, version); err != nil {
 			return fail("engine", err)
 		}
 		i.write(job.ID, "the engine %s is installed\n", i.opts.Engine.Name())
@@ -332,7 +332,7 @@ func (i *Installer) run(ctx context.Context, job InstallJob, node Node, password
 
 // installEngine puts the protocol engine on the node and applies the
 // configuration of the node.
-func (i *Installer) installEngine(ctx context.Context, node Node, privateKey string) error {
+func (i *Installer) installEngine(ctx context.Context, node Node, privateKey, version string) error {
 	// The engine has to know the platform of the node, so the node is asked
 	// when the panel does not know it yet.
 	if node.OS == "" || node.Arch == "" {
@@ -349,7 +349,7 @@ func (i *Installer) installEngine(ctx context.Context, node Node, privateKey str
 		}
 	}
 
-	config, err := i.ConfigOf(ctx, node.ID)
+	config, err := i.ConfigOf(ctx, node)
 	if err != nil {
 		return err
 	}
@@ -365,21 +365,24 @@ func (i *Installer) installEngine(ctx context.Context, node Node, privateKey str
 		Arch:       node.Arch,
 	}
 
-	if err := i.opts.Engine.Install(ctx, target, i.opts.EngineVersion); err != nil {
+	if err := i.opts.Engine.Install(ctx, target, version); err != nil {
 		return err
 	}
 	return i.opts.Engine.Apply(ctx, target, config)
 }
 
 // ConfigOf builds the configuration of a node from the store.
-func (i *Installer) ConfigOf(ctx context.Context, nodeID string) (engines.Config, error) {
+//
+// The template of the node brings its own settings and its own routing, so a
+// node that follows a template needs nothing else.
+func (i *Installer) ConfigOf(ctx context.Context, node Node) (engines.Config, error) {
 	config := engines.Config{}
 
 	if i.config == nil {
 		return config, nil
 	}
 
-	entrypoints, err := i.config.EntryPoints(ctx, nodeID)
+	entrypoints, err := i.config.EntryPoints(ctx, node.ID)
 	if err != nil {
 		return config, err
 	}
@@ -394,7 +397,7 @@ func (i *Installer) ConfigOf(ctx context.Context, nodeID string) (engines.Config
 		})
 	}
 
-	egresses, err := i.config.Egresses(ctx, nodeID)
+	egresses, err := i.config.Egresses(ctx, node.ID)
 	if err != nil {
 		return config, err
 	}
@@ -409,7 +412,7 @@ func (i *Installer) ConfigOf(ctx context.Context, nodeID string) (engines.Config
 		})
 	}
 
-	endpoints, err := i.config.Endpoints(ctx, nodeID)
+	endpoints, err := i.config.Endpoints(ctx, node.ID)
 	if err != nil {
 		return config, err
 	}
@@ -429,6 +432,15 @@ func (i *Installer) ConfigOf(ctx context.Context, nodeID string) (engines.Config
 			Config:  item.Config,
 			Enabled: enabled,
 		})
+	}
+
+	// The template of the node.
+	if node.TemplateID != "" {
+		template, err := i.config.Template(ctx, node.TemplateID)
+		if err == nil {
+			config.Core = template.Core
+			config.Route = template.Route
+		}
 	}
 
 	return config, nil

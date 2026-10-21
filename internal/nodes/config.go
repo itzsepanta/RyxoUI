@@ -328,6 +328,27 @@ func (s *ConfigStore) DeleteEndpoint(ctx context.Context, endpointID string) err
 	return nil
 }
 
+// Template reads one template.
+func (s *ConfigStore) Template(ctx context.Context, templateID string) (Template, error) {
+	var (
+		item  Template
+		route string
+		core  string
+	)
+	err := s.db.QueryRowContext(ctx,
+		"SELECT id, name, remark, route, core, created_at, updated_at FROM templates WHERE id = ?", templateID).
+		Scan(&item.ID, &item.Name, &item.Remark, &route, &core, &item.CreatedAt, &item.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Template{}, ErrKeyNotFound
+	}
+	if err != nil {
+		return Template{}, fmt.Errorf("nodes: read the template: %w", err)
+	}
+	item.Route = decodeConfig(route)
+	item.Core = decodeConfig(core)
+	return item, nil
+}
+
 // CreateTemplate stores a template.
 func (s *ConfigStore) CreateTemplate(ctx context.Context, item Template) (Template, error) {
 	if strings.TrimSpace(item.Name) == "" {

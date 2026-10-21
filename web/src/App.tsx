@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
 import { LoginPage } from "@/pages/Login";
@@ -13,10 +14,21 @@ import { SecurityPage } from "@/pages/Security";
 import { NodesPage } from "@/pages/Nodes";
 import { NodeDetailPage } from "@/pages/NodeDetail";
 import { ToolsPage } from "@/pages/Tools";
+import { AlertsPage } from "@/pages/Alerts";
+import { DocsPage } from "@/pages/Docs";
+import { ForbiddenPage, NotFoundPage } from "@/pages/Errors";
 import { Spinner } from "@/components/ui";
 
 export function App() {
   const auth = useAuth();
+  const [forbidden, setForbidden] = useState(false);
+
+  // A request that is refused shows the page of the refusal.
+  useEffect(() => {
+    const refuse = () => setForbidden(true);
+    window.addEventListener("ryxoui:forbidden", refuse);
+    return () => window.removeEventListener("ryxoui:forbidden", refuse);
+  }, []);
 
   if (auth.loading) {
     return (
@@ -34,6 +46,10 @@ export function App() {
     return <LoginPage onSignIn={() => void auth.refresh()} />;
   }
 
+  if (forbidden) {
+    return <ForbiddenPage />;
+  }
+
   return (
     <AppShell>
       <Routes>
@@ -46,9 +62,11 @@ export function App() {
         <Route path="/tokens" element={<TokensPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/tools" element={<ToolsPage />} />
+        <Route path="/alerts" element={<AlertsPage />} />
+        <Route path="/docs" element={<DocsPage />} />
         <Route path="/updates" element={<UpdatesPage />} />
         <Route path="/security" element={<SecurityPage />} />
-        <Route path="*" element={<Navigate to="/operators" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AppShell>
   );
