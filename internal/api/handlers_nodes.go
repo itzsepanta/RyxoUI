@@ -376,6 +376,281 @@ func (s *Server) handleNodeEngine(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, body)
 }
 
+// handleDeleteEgress removes an outgoing connection.
+func (s *Server) handleDeleteEgress(w http.ResponseWriter, r *http.Request) {
+	egressID := r.PathValue("id")
+	if err := s.config.DeleteEgress(r.Context(), egressID); err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// handleDeleteEndpoint removes a destination.
+func (s *Server) handleDeleteEndpoint(w http.ResponseWriter, r *http.Request) {
+	endpointID := r.PathValue("id")
+	if err := s.config.DeleteEndpoint(r.Context(), endpointID); err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// handleUpdateEntryPoint changes a listener.
+func (s *Server) handleUpdateEntryPoint(w http.ResponseWriter, r *http.Request) {
+	entryID := r.PathValue("id")
+
+	var body struct {
+		Name    string         `json:"name"`
+		Tag     string         `json:"tag"`
+		Type    string         `json:"type"`
+		Config  map[string]any `json:"config"`
+		NodeID  string         `json:"nodeId"`
+		Enabled *bool          `json:"enabled"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	items, err := s.config.EntryPoints(r.Context(), "")
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	var current nodes.EntryPoint
+	found := false
+	for _, item := range items {
+		if item.ID == entryID {
+			current = item
+			found = true
+			break
+		}
+	}
+	if !found {
+		handleError(w, r, s.log, notFound("entry point not found"))
+		return
+	}
+
+	if body.Name != "" {
+		current.Name = body.Name
+	}
+	if body.Tag != "" {
+		current.Tag = body.Tag
+	}
+	if body.Type != "" {
+		current.Type = body.Type
+	}
+	if body.Config != nil {
+		current.Config = body.Config
+	}
+	if body.NodeID != "" {
+		current.NodeID = body.NodeID
+	}
+	if body.Enabled != nil {
+		current.Enabled = *body.Enabled
+	}
+
+	if err := s.config.UpdateEntryPoint(r.Context(), current); err != nil {
+		if errors.Is(err, nodes.ErrDuplicateTag) {
+			handleError(w, r, s.log, conflict("the tag is already taken"))
+			return
+		}
+		handleError(w, r, s.log, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, current)
+}
+
+// handleUpdateEgress changes an outgoing connection.
+func (s *Server) handleUpdateEgress(w http.ResponseWriter, r *http.Request) {
+	egressID := r.PathValue("id")
+
+	var body struct {
+		Name    string         `json:"name"`
+		Tag     string         `json:"tag"`
+		Type    string         `json:"type"`
+		Config  map[string]any `json:"config"`
+		NodeID  string         `json:"nodeId"`
+		Enabled *bool          `json:"enabled"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	items, err := s.config.Egresses(r.Context(), "")
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	var current nodes.Egress
+	found := false
+	for _, item := range items {
+		if item.ID == egressID {
+			current = item
+			found = true
+			break
+		}
+	}
+	if !found {
+		handleError(w, r, s.log, notFound("egress not found"))
+		return
+	}
+
+	if body.Name != "" {
+		current.Name = body.Name
+	}
+	if body.Tag != "" {
+		current.Tag = body.Tag
+	}
+	if body.Type != "" {
+		current.Type = body.Type
+	}
+	if body.Config != nil {
+		current.Config = body.Config
+	}
+	if body.NodeID != "" {
+		current.NodeID = body.NodeID
+	}
+	if body.Enabled != nil {
+		current.Enabled = *body.Enabled
+	}
+
+	if err := s.config.UpdateEgress(r.Context(), current); err != nil {
+		if errors.Is(err, nodes.ErrDuplicateTag) {
+			handleError(w, r, s.log, conflict("the tag is already taken"))
+			return
+		}
+		handleError(w, r, s.log, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, current)
+}
+
+// handleUpdateEndpoint changes a destination.
+func (s *Server) handleUpdateEndpoint(w http.ResponseWriter, r *http.Request) {
+	endpointID := r.PathValue("id")
+
+	var body struct {
+		Name   string         `json:"name"`
+		NodeID string         `json:"nodeId"`
+		Type   string         `json:"type"`
+		Config map[string]any `json:"config"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	items, err := s.config.Endpoints(r.Context(), "")
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	var current nodes.Endpoint
+	found := false
+	for _, item := range items {
+		if item.ID == endpointID {
+			current = item
+			found = true
+			break
+		}
+	}
+	if !found {
+		handleError(w, r, s.log, notFound("endpoint not found"))
+		return
+	}
+
+	if body.Name != "" {
+		current.Name = body.Name
+	}
+	if body.NodeID != "" {
+		current.NodeID = body.NodeID
+	}
+	if body.Type != "" {
+		current.Type = body.Type
+	}
+	if body.Config != nil {
+		current.Config = body.Config
+	}
+
+	if err := s.config.UpdateEndpoint(r.Context(), current); err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, current)
+}
+
+// handleApplyNode writes the configuration of a node on the node itself.
+func (s *Server) handleApplyNode(w http.ResponseWriter, r *http.Request) {
+	if s.engine == nil {
+		handleError(w, r, s.log, unavailable("the panel has no protocol engine"))
+		return
+	}
+
+	nodeID := r.PathValue("id")
+	node, err := s.nodes.Get(r.Context(), nodeID)
+	if err != nil {
+		if errors.Is(err, nodes.ErrNotFound) {
+			handleError(w, r, s.log, notFound("node not found"))
+			return
+		}
+		handleError(w, r, s.log, err)
+		return
+	}
+	if !node.KeyInstalled {
+		handleError(w, r, s.log, conflict("the key of the node is not installed yet"))
+		return
+	}
+
+	key, err := s.keys.Get(r.Context(), node.SSHKeyID)
+	if err != nil {
+		if errors.Is(err, nodes.ErrKeyNotFound) {
+			handleError(w, r, s.log, notFound("the node has no key"))
+			return
+		}
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	config, err := s.installer.ConfigOf(r.Context(), nodeID)
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	target := engines.Target{
+		NodeID:     node.ID,
+		Host:       node.SSHHostName(),
+		Port:       node.SSHPort,
+		User:       node.SSHUser,
+		PrivateKey: key.PrivateKey,
+		KnownHost:  node.HostKey,
+		OS:         node.OS,
+		Arch:       node.Arch,
+	}
+
+	if err := s.engine.Apply(r.Context(), target, config); err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+
+	content, err := s.engine.Render(r.Context(), target, config)
+	if err != nil {
+		handleError(w, r, s.log, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":      true,
+		"engine":  s.engine.Name(),
+		"applied": string(content),
+	})
+}
+
 // handleListEntryPoints returns the listeners of a node.
 func (s *Server) handleListEntryPoints(w http.ResponseWriter, r *http.Request) {
 	items, err := s.config.EntryPoints(r.Context(), r.URL.Query().Get("nodeId"))

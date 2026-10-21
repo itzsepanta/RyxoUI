@@ -224,6 +224,33 @@ func (s *ConfigStore) Egresses(ctx context.Context, nodeID string) ([]Egress, er
 	return out, rows.Err()
 }
 
+// UpdateEgress writes an outgoing connection.
+func (s *ConfigStore) UpdateEgress(ctx context.Context, item Egress) error {
+	encoded, err := encodeConfig(item.Config)
+	if err != nil {
+		return err
+	}
+	now := db.Now()
+	_, err = s.db.ExecContext(ctx,
+		"UPDATE egresses SET name = ?, tag = ?, type = ?, config = ?, node_id = ?, enabled = ?, updated_at = ? WHERE id = ?",
+		item.Name, item.Tag, item.Type, encoded, item.NodeID, boolToInt(item.Enabled), now, item.ID)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return ErrDuplicateTag
+		}
+		return fmt.Errorf("nodes: update egress: %w", err)
+	}
+	return nil
+}
+
+// DeleteEgress removes an outgoing connection.
+func (s *ConfigStore) DeleteEgress(ctx context.Context, egressID string) error {
+	if _, err := s.db.ExecContext(ctx, "DELETE FROM egresses WHERE id = ?", egressID); err != nil {
+		return fmt.Errorf("nodes: delete egress: %w", err)
+	}
+	return nil
+}
+
 // CreateEndpoint stores a destination.
 func (s *ConfigStore) CreateEndpoint(ctx context.Context, item Endpoint) (Endpoint, error) {
 	encoded, err := encodeConfig(item.Config)
@@ -275,6 +302,30 @@ func (s *ConfigStore) Endpoints(ctx context.Context, nodeID string) ([]Endpoint,
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+// UpdateEndpoint writes a destination.
+func (s *ConfigStore) UpdateEndpoint(ctx context.Context, item Endpoint) error {
+	encoded, err := encodeConfig(item.Config)
+	if err != nil {
+		return err
+	}
+	now := db.Now()
+	_, err = s.db.ExecContext(ctx,
+		"UPDATE endpoints SET name = ?, node_id = ?, type = ?, config = ?, updated_at = ? WHERE id = ?",
+		item.Name, item.NodeID, item.Type, encoded, now, item.ID)
+	if err != nil {
+		return fmt.Errorf("nodes: update endpoint: %w", err)
+	}
+	return nil
+}
+
+// DeleteEndpoint removes a destination.
+func (s *ConfigStore) DeleteEndpoint(ctx context.Context, endpointID string) error {
+	if _, err := s.db.ExecContext(ctx, "DELETE FROM endpoints WHERE id = ?", endpointID); err != nil {
+		return fmt.Errorf("nodes: delete endpoint: %w", err)
+	}
+	return nil
 }
 
 // CreateTemplate stores a template.

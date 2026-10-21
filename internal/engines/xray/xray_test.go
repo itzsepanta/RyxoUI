@@ -299,6 +299,37 @@ func TestInstallPutsTheEngineOnTheNode(t *testing.T) {
 	}
 }
 
+func TestApplyWritesTheConfiguration(t *testing.T) {
+	node, err := sshtest.New("the answer of the node")
+	if err != nil {
+		t.Fatalf("start the node: %v", err)
+	}
+	defer node.Close()
+
+	engine := New()
+	target := engines.Target{
+		Host:       node.Host,
+		Port:       node.Port,
+		User:       "root",
+		PrivateKey: testKey(t),
+		OS:         "linux",
+		Arch:       "amd64",
+	}
+
+	config := engines.Config{
+		Entrypoints: []engines.Entrypoint{
+			{Tag: "inbound-443", Type: "vless", Enabled: true, Config: map[string]any{"port": 443}},
+		},
+	}
+
+	if err := engine.Apply(context.Background(), target, config); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	if node.CommandCount() == 0 {
+		t.Fatal("the engine did not talk to the node")
+	}
+}
+
 func TestHealthReadsTheStateOfTheEngine(t *testing.T) {
 	node, err := sshtest.New("active\n")
 	if err != nil {

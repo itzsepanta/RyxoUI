@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Activity, ArrowLeft, KeyRound, PackageCheck } from "lucide-react";
+import { Activity, ArrowLeft, KeyRound, PackageCheck, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { api, ApiError } from "@/lib/api";
+import { NodeConfigCard } from "@/components/NodeConfigCard";
 import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Spinner, Table, Td, Th } from "@/components/ui";
 import type { Node } from "@/pages/Nodes";
 
@@ -70,6 +71,7 @@ export function NodeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [probing, setProbing] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -175,6 +177,19 @@ export function NodeDetailPage() {
     await load();
   }
 
+  async function apply() {
+    setApplying(true);
+    setError(null);
+    try {
+      await api.post(`/api/nodes/${id}/apply`);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("common.error"));
+    } finally {
+      setApplying(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="grid place-items-center py-16">
@@ -250,14 +265,20 @@ export function NodeDetailPage() {
         </Card>
       </div>
 
+      <NodeConfigCard nodeId={id} onChanged={() => void load()} />
+
       <Card>
         <CardHeader>
-          <CardTitle>{t("nodes.config")}</CardTitle>
+          <CardTitle>{t("nodes.renderedConfig")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge>{engine?.name ?? "—"}</Badge>
             <span>{t("nodes.configHint")}</span>
+            <Button className="ms-auto" variant="outline" disabled={applying} onClick={apply}>
+              <Upload className="h-4 w-4" />
+              {applying ? t("nodes.applying") : t("nodes.apply")}
+            </Button>
           </div>
           {config ? (
             <pre className="max-h-96 overflow-auto rounded-md bg-muted/40 p-3 text-xs">{config}</pre>

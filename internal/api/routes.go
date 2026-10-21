@@ -70,6 +70,7 @@ func (s *Server) routeTable() []Route {
 		{Method: http.MethodGet, Path: "/api/engines", Summary: "Describe the protocol engine of the panel.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeEngine},
 		{Method: http.MethodPost, Path: "/api/nodes/{id}/probe", Summary: "Ask a node about itself over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleProbeNode},
 		{Method: http.MethodPost, Path: "/api/nodes/{id}/install", Summary: "Set a node up over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleInstallNode},
+		{Method: http.MethodPost, Path: "/api/nodes/{id}/apply", Summary: "Write the configuration of a node on the node.", Scope: authz.ScopeNodesInstall, Handler: s.handleApplyNode},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/install", Summary: "Read the install jobs of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleInstallJobs},
 
 		// Keys of the panel.
@@ -80,11 +81,16 @@ func (s *Server) routeTable() []Route {
 		// Configuration of the nodes.
 		{Method: http.MethodGet, Path: "/api/entrypoints", Summary: "List the listeners.", Scope: authz.ScopeNodesRead, Handler: s.handleListEntryPoints},
 		{Method: http.MethodPost, Path: "/api/entrypoints", Summary: "Create a listener.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateEntryPoint},
+		{Method: http.MethodPut, Path: "/api/entrypoints/{id}", Summary: "Change a listener.", Scope: authz.ScopeNodesWrite, Handler: s.handleUpdateEntryPoint},
 		{Method: http.MethodDelete, Path: "/api/entrypoints/{id}", Summary: "Remove a listener.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteEntryPoint},
 		{Method: http.MethodGet, Path: "/api/egresses", Summary: "List the outgoing connections.", Scope: authz.ScopeNodesRead, Handler: s.handleListEgresses},
 		{Method: http.MethodPost, Path: "/api/egresses", Summary: "Create an outgoing connection.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateEgress},
+		{Method: http.MethodPut, Path: "/api/egresses/{id}", Summary: "Change an outgoing connection.", Scope: authz.ScopeNodesWrite, Handler: s.handleUpdateEgress},
+		{Method: http.MethodDelete, Path: "/api/egresses/{id}", Summary: "Remove an outgoing connection.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteEgress},
 		{Method: http.MethodGet, Path: "/api/endpoints", Summary: "List the destinations.", Scope: authz.ScopeNodesRead, Handler: s.handleListEndpoints},
 		{Method: http.MethodPost, Path: "/api/endpoints", Summary: "Create a destination.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateEndpoint},
+		{Method: http.MethodPut, Path: "/api/endpoints/{id}", Summary: "Change a destination.", Scope: authz.ScopeNodesWrite, Handler: s.handleUpdateEndpoint},
+		{Method: http.MethodDelete, Path: "/api/endpoints/{id}", Summary: "Remove a destination.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteEndpoint},
 		{Method: http.MethodGet, Path: "/api/templates", Summary: "List the templates.", Scope: authz.ScopeNodesRead, Handler: s.handleListTemplates},
 		{Method: http.MethodPost, Path: "/api/templates", Summary: "Create a template.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateTemplate},
 		{Method: http.MethodDelete, Path: "/api/templates/{id}", Summary: "Remove a template.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteTemplate},

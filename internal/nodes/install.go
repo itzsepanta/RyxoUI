@@ -333,6 +333,22 @@ func (i *Installer) run(ctx context.Context, job InstallJob, node Node, password
 // installEngine puts the protocol engine on the node and applies the
 // configuration of the node.
 func (i *Installer) installEngine(ctx context.Context, node Node, privateKey string) error {
+	// The engine has to know the platform of the node, so the node is asked
+	// when the panel does not know it yet.
+	if node.OS == "" || node.Arch == "" {
+		result, err := i.probe(ctx, node, privateKey)
+		if err != nil {
+			return fmt.Errorf("nodes: read the platform of the node: %w", err)
+		}
+		node.OS = result.OS
+		node.Arch = result.Arch
+		node.CoreVersion = result.CoreVersion
+		node.NodeVersion = result.NodeVersion
+		if err := i.store.ApplyProbe(ctx, node.ID, result, node.Status, node.Message); err != nil {
+			return err
+		}
+	}
+
 	config, err := i.ConfigOf(ctx, node.ID)
 	if err != nil {
 		return err
