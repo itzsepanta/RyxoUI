@@ -67,6 +67,8 @@ func (s *Server) routeTable() []Route {
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/health", Summary: "Read the health of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeHealth},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/usage", Summary: "Read the traffic of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeUsage},
 		{Method: http.MethodGet, Path: "/api/nodes/{id}/config", Summary: "Render the configuration of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeConfig},
+		{Method: http.MethodGet, Path: "/api/nodes/{id}/logs", Summary: "Read the log of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeLogs},
+		{Method: http.MethodGet, Path: "/api/nodes/{id}/logs/stream", Summary: "Follow the log of a node.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeLogStream},
 		{Method: http.MethodGet, Path: "/api/engines", Summary: "Describe the protocol engine of the panel.", Scope: authz.ScopeNodesRead, Handler: s.handleNodeEngine},
 		{Method: http.MethodPost, Path: "/api/nodes/{id}/probe", Summary: "Ask a node about itself over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleProbeNode},
 		{Method: http.MethodPost, Path: "/api/nodes/{id}/install", Summary: "Set a node up over SSH.", Scope: authz.ScopeNodesInstall, Handler: s.handleInstallNode},

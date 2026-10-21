@@ -138,6 +138,14 @@ func (r *statusRecorder) Write(b []byte) (int, error) {
 	return r.ResponseWriter.Write(b)
 }
 
+// Flush lets a handler stream its answer. The writer of the request is asked
+// first, so a stream really reaches the client.
+func (r *statusRecorder) Flush() {
+	if flusher, ok := r.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
 // clientIP returns the address of the caller, honouring the proxy headers
 // only for requests that come from a trusted proxy.
 func clientIP(r *http.Request) string {

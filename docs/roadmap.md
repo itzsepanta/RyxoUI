@@ -204,8 +204,8 @@ React 18 + TS + Vite + Tailwind + shadcn/ui. صفحات اصلی:
 - [x] **M1.6** مدل پیکربندی: entrypoints / egresses / endpoints / templates / route. — ✅ مدل، API و صفحهٔ کانفیگ نود (ساخت، تغییر، حذف + کانفیگ رندرشده).
 - [ ] **M1.7** Preset catalogue: قالب‌های آمادهٔ inbound/outbound با clone-and-edit.
 - [ ] **M1.8** ابزارهای کلید: keypair، reality، vless-encryption، ECH keypair (در M5 نهایی می‌شود).
-- [ ] **M1.9** لاگ نود: tail با فیلتر سطح/زمان، ring buffer.
-- [~] **M1.10** صفحهٔ نودها + تب detail (overview/health/logs/config) + جادوگر نصب. — 🟡 صفحهٔ نودها و بخش‌های overview/health/config/SSH/نصب موجود. مانده: تب لاگ، جادوگر نصب و diff قبل از Apply.
+- [x] **M1.9** لاگ نود: tail با فیلتر سطح/زمان، ring buffer. — ✅ `internal/nodes/logs.go` + استریم SSE (`/api/nodes/{id}/logs/stream`) + کارت لاگ با دنبال کردن زنده.
+- [~] **M1.10** صفحهٔ نودها + تب detail (overview/health/logs/config) + جادوگر نصب. — 🟡 صفحهٔ نودها و بخش‌های overview/health/config/SSH/نصب/لاگ موجود. مانده: جادوگر نصب چندمرحله‌ای و diff قبل از Apply.
 - [x] **M1.11** مسیر `/install/ryxoui.sh` + endpoint دانلود باینری + CA panel. — ✅ `internal/installer` (اسکریپت نصب) + `internal/certs` (CA خودامضا) + مسیرهای `/install/*` (اسکریپت، CA، باینری، ثبت و تأیید با توکن).
 
 **DoD M1:** نصب خودکار xray روی یک VPS آزمایشی، ساخت entrypoint، ساخت کاربر آزمایشی، تأیید connection.

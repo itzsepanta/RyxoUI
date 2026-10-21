@@ -2,113 +2,14 @@ package nodes
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/rand"
 	"fmt"
-	"net"
 	"strings"
 	"testing"
 	"time"
 
 	panelssh "github.com/ryxoui/ryxoui/internal/ssh"
-
-	"golang.org/x/crypto/ssh"
+	"github.com/ryxoui/ryxoui/internal/ssh/sshtest"
 )
-
-// sshServer is a small SSH server that answers every command with the same
-// text. It stands in for a node in the tests.
-type sshServer struct {
-	host   string
-	port   int
-	output string
-}
-
-// startSSHServer starts a server on a free port and stops it with the test.
-func startSSHServer(t *testing.T, output string) *sshServer {
-	t.Helper()
-
-	_, private, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatalf("generate the host key: %v", err)
-	}
-	signer, err := ssh.NewSignerFromKey(private)
-	if err != nil {
-		t.Fatalf("sign the host key: %v", err)
-	}
-
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen: %v", err)
-	}
-	t.Cleanup(func() { listener.Close() })
-
-	server := &sshServer{
-		host:   "127.0.0.1",
-		port:   listener.Addr().(*net.TCPAddr).Port,
-		output: output,
-	}
-
-	go func() {
-		for {
-			connection, err := listener.Accept()
-			if err != nil {
-				return
-			}
-			go server.serve(connection, signer)
-		}
-	}()
-
-	return server
-}
-
-// serve answers one connection.
-func (s *sshServer) serve(connection net.Conn, signer ssh.Signer) {
-	config := &ssh.ServerConfig{
-		PublicKeyCallback: func(ssh.ConnMetadata, ssh.PublicKey) (*ssh.Permissions, error) {
-			return nil, nil
-		},
-		PasswordCallback: func(ssh.ConnMetadata, []byte) (*ssh.Permissions, error) {
-			return nil, nil
-		},
-	}
-	config.AddHostKey(signer)
-
-	serverConn, channels, requests, err := ssh.NewServerConn(connection, config)
-	if err != nil {
-		connection.Close()
-		return
-	}
-	defer serverConn.Close()
-	go ssh.DiscardRequests(requests)
-
-	for newChannel := range channels {
-		if newChannel.ChannelType() != "session" {
-			newChannel.Reject(ssh.UnknownChannelType, "only sessions are served")
-			continue
-		}
-		channel, channelRequests, err := newChannel.Accept()
-		if err != nil {
-			return
-		}
-		go s.serveSession(channel, channelRequests)
-	}
-}
-
-// serveSession answers one session.
-func (s *sshServer) serveSession(channel ssh.Channel, requests <-chan *ssh.Request) {
-	defer channel.Close()
-
-	for request := range requests {
-		if request.Type != "exec" {
-			request.Reply(false, nil)
-			continue
-		}
-		request.Reply(true, nil)
-		_, _ = channel.Write([]byte(s.output))
-		_, _ = channel.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{Status: 0}))
-		return
-	}
-}
 
 func TestProbeReadsTheNode(t *testing.T) {
 	output := strings.Join([]string{
@@ -124,7 +25,11 @@ func TestProbeReadsTheNode(t *testing.T) {
 		"",
 	}, "\n")
 
-	server := startSSHServer(t, output)
+	server, err := sshtest.New(output)
+	if err != nil {
+		t.Fatalf("start the node: %v", err)
+	}
+	defer server.Close()
 
 	pair, err := panelssh.GenerateKeyPair("test")
 	if err != nil {
@@ -134,8 +39,8 @@ func TestProbeReadsTheNode(t *testing.T) {
 	node := Node{
 		ID:           "node-1",
 		Name:         "eu-1",
-		SSHHost:      server.host,
-		SSHPort:      server.port,
+		SSHHost:      server.Host,
+		SSHPort:      server.Port,
 		SSHUser:      "root",
 		SSHKeyID:     "key-1",
 		KeyInstalled: true,
@@ -188,13 +93,17 @@ func TestProbeNeedsAKey(t *testing.T) {
 }
 
 func TestProbePinsTheHostKey(t *testing.T) {
-	server := startSSHServer(t, "os=linux\n")
+	server, err := sshtest.New("os=linux\n")
+	if err != nil {
+		t.Fatalf("start the node: %v", err)
+	}
+	defer server.Close()
 	pair, err := panelssh.GenerateKeyPair("test")
 	if err != nil {
 		t.Fatalf("generate the client key: %v", err)
 	}
 
-	node := Node{SSHHost: server.host, SSHPort: server.port, SSHUser: "root"}
+	node := Node{SSHHost: server.Host, SSHPort: server.Port, SSHUser: "root"}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

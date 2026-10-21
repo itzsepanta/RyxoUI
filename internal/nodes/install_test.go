@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ryxoui/ryxoui/internal/ssh/sshtest"
 )
 
 func TestTheInstallerSetsTheNodeUp(t *testing.T) {
@@ -12,13 +14,17 @@ func TestTheInstallerSetsTheNodeUp(t *testing.T) {
 	keys := NewKeyStore(store.db)
 	jobs := NewJobStore(store.db)
 
-	server := startSSHServer(t, "os=linux\narch=x86_64\nmem_total=1024\nmem_available=512\n")
+	server, err := sshtest.New("os=linux\narch=x86_64\nmem_total=1024\nmem_available=512\n")
+	if err != nil {
+		t.Fatalf("start the node: %v", err)
+	}
+	defer server.Close()
 
 	node, err := store.Create(context.Background(), Node{
 		Name:         "eu-1",
-		Address:      server.host,
-		SSHHost:      server.host,
-		SSHPort:      server.port,
+		Address:      server.Host,
+		SSHHost:      server.Host,
+		SSHPort:      server.Port,
 		SSHUser:      "root",
 		KeyInstalled: true,
 		Enabled:      true,

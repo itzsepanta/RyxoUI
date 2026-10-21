@@ -6,6 +6,7 @@
 package ssh
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/ed25519"
@@ -14,6 +15,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -292,6 +294,57 @@ func (s *Session) Run(ctx context.Context, command string) (string, string, int,
 			return stdout.String(), stderr.String(), code, fmt.Errorf("ssh: wait: %w", err)
 		}
 		return stdout.String(), stderr.String(), code, nil
+	}
+}
+
+// Stream runs a command and hands every line of its output to the handler.
+//
+// The stream ends when the command ends or when the context is cancelled, so
+// a command that follows a log can be stopped by the caller.
+func (s *Session) Stream(ctx context.Context, command string, handler func(string)) error {
+	if s == nil || s.client == nil {
+		return ErrNotConnected
+	}
+	session, err := s.client.NewSession()
+	if err != nil {
+		return fmt.Errorf("ssh: open session: %w", err)
+	}
+	defer session.Close()
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("ssh: stdout pipe: %w", err)
+	}
+	var stderr strings.Builder
+	session.Stderr = &stderr
+
+	if err := session.Start(command); err != nil {
+		return fmt.Errorf("ssh: run %q: %w", command, err)
+	}
+
+	// The command is stopped when the caller gives up.
+	finished := make(chan struct{})
+	defer close(finished)
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = session.Signal(ssh.SIGKILL)
+		case <-finished:
+		}
+	}()
+
+	reader := bufio.NewReader(stdout)
+	for {
+		line, err := reader.ReadString('\n')
+		if line != "" {
+			handler(strings.TrimRight(line, "\r\n"))
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return fmt.Errorf("ssh: read the output: %w", err)
+		}
 	}
 }
 

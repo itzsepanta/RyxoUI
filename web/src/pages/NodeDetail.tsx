@@ -4,6 +4,7 @@ import { Activity, ArrowLeft, KeyRound, PackageCheck, Upload } from "lucide-reac
 import { useI18n } from "@/lib/i18n";
 import { api, ApiError } from "@/lib/api";
 import { NodeConfigCard } from "@/components/NodeConfigCard";
+import { NodeLogCard } from "@/components/NodeLogCard";
 import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Spinner, Table, Td, Th } from "@/components/ui";
 import type { Node } from "@/pages/Nodes";
 
@@ -266,6 +267,8 @@ export function NodeDetailPage() {
       </div>
 
       <NodeConfigCard nodeId={id} onChanged={() => void load()} />
+
+      <NodeLogCard nodeId={id} />
 
       <Card>
         <CardHeader>
