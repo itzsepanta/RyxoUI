@@ -86,6 +86,7 @@ type Server struct {
 	config    *nodes.ConfigStore
 	keys      *nodes.KeyStore
 	jobs      *nodes.JobStore
+	presets   *nodes.PresetStore
 	installer *nodes.Installer
 	outbox    *events.Outbox
 	registry  *events.Registry
@@ -124,6 +125,7 @@ func New(cfg Config) (*Server, error) {
 		config:    nodes.NewConfigStore(cfg.DB),
 		keys:      nodes.NewKeyStore(cfg.DB),
 		jobs:      nodes.NewJobStore(cfg.DB),
+		presets:   nodes.NewPresetStore(cfg.DB),
 		outbox:    events.NewOutbox(cfg.DB),
 		registry:  events.DefaultRegistry(),
 		limiter:   newLimiter(cfg.RateLimitPerSecond, cfg.RateLimitBurst),
@@ -138,6 +140,9 @@ func New(cfg Config) (*Server, error) {
 	})
 
 	if err := srv.roles.EnsureBuiltins(context.Background()); err != nil {
+		return nil, err
+	}
+	if err := srv.ensurePresets(context.Background()); err != nil {
 		return nil, err
 	}
 	srv.routes = srv.routeTable()

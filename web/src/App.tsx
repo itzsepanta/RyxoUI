@@ -12,6 +12,7 @@ import { UpdatesPage } from "@/pages/Updates";
 import { SecurityPage } from "@/pages/Security";
 import { NodesPage } from "@/pages/Nodes";
 import { NodeDetailPage } from "@/pages/NodeDetail";
+import { ToolsPage } from "@/pages/Tools";
 import { Spinner } from "@/components/ui";
 
 export function App() {
@@ -44,6 +45,7 @@ export function App() {
         <Route path="/audit" element={<AuditPage />} />
         <Route path="/tokens" element={<TokensPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/tools" element={<ToolsPage />} />
         <Route path="/updates" element={<UpdatesPage />} />
         <Route path="/security" element={<SecurityPage />} />
         <Route path="*" element={<Navigate to="/operators" replace />} />

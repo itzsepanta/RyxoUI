@@ -62,6 +62,7 @@ var builtinRoles = []Role{
 			string(ScopeNodesRead),
 			string(ScopeNodesWrite),
 			string(ScopeNodesInstall),
+			string(ScopeToolsWrite),
 		},
 	},
 	{

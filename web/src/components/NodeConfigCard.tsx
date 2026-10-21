@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { api, ApiError } from "@/lib/api";
-import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Table, Td, Th } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Select, Table, Td, Th } from "@/components/ui";
 
 interface EntryPoint {
   id: string;
@@ -30,6 +30,15 @@ interface Endpoint {
   config: Record<string, unknown>;
 }
 
+interface Preset {
+  id: string;
+  name: string;
+  kind: string;
+  type: string;
+  remark: string;
+  config: Record<string, unknown>;
+}
+
 interface NodeConfigCardProps {
   nodeId: string;
   onChanged?: () => void;
@@ -42,6 +51,9 @@ export function NodeConfigCard({ nodeId, onChanged }: NodeConfigCardProps) {
   const [entryPoints, setEntryPoints] = useState<EntryPoint[]>([]);
   const [egresses, setEgresses] = useState<Egress[]>([]);
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [entryPreset, setEntryPreset] = useState("");
+  const [egressPreset, setEgressPreset] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const [entryName, setEntryName] = useState("");
@@ -59,14 +71,16 @@ export function NodeConfigCard({ nodeId, onChanged }: NodeConfigCardProps) {
 
   const load = useCallback(async () => {
     try {
-      const [entry, egress, endpoint] = await Promise.all([
+      const [entry, egress, endpoint, preset] = await Promise.all([
         api.list<EntryPoint>(`/api/entrypoints?nodeId=${nodeId}`),
         api.list<Egress>(`/api/egresses?nodeId=${nodeId}`),
         api.list<Endpoint>(`/api/endpoints?nodeId=${nodeId}`),
+        api.list<Preset>("/api/presets"),
       ]);
       setEntryPoints(entry.data);
       setEgresses(egress.data);
       setEndpoints(endpoint.data);
+      setPresets(preset.data);
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));
@@ -81,15 +95,21 @@ export function NodeConfigCard({ nodeId, onChanged }: NodeConfigCardProps) {
     event.preventDefault();
     setError(null);
     try {
+      const preset = presets.find((item) => item.id === entryPreset);
+      const config = preset
+        ? { ...preset.config, port: Number(entryPort) || preset.config.port, clients: [] }
+        : { port: Number(entryPort) || 443, clients: [] };
+
       await api.post("/api/entrypoints", {
         name: entryName,
         tag: entryTag,
-        type: entryType,
+        type: preset?.type ?? entryType,
         nodeId,
-        config: { port: Number(entryPort) || 443, clients: [] },
+        config,
       });
       setEntryName("");
       setEntryTag("");
+      setEntryPreset("");
       await load();
       onChanged?.();
     } catch (err) {
@@ -101,15 +121,17 @@ export function NodeConfigCard({ nodeId, onChanged }: NodeConfigCardProps) {
     event.preventDefault();
     setError(null);
     try {
+      const preset = presets.find((item) => item.id === egressPreset);
       await api.post("/api/egresses", {
         name: egressName,
         tag: egressTag,
-        type: egressType,
+        type: preset?.type ?? egressType,
         nodeId,
-        config: { protocol: egressType },
+        config: preset?.config ?? { protocol: egressType },
       });
       setEgressName("");
       setEgressTag("");
+      setEgressPreset("");
       await load();
       onChanged?.();
     } catch (err) {
@@ -205,12 +227,28 @@ export function NodeConfigCard({ nodeId, onChanged }: NodeConfigCardProps) {
               onChange={(e) => setEntryTag(e.target.value)}
               required
             />
-            <Input
-              className="w-28"
-              placeholder={t("nodes.type")}
-              value={entryType}
-              onChange={(e) => setEntryType(e.target.value)}
-            />
+            <Select
+              className="w-44"
+              value={entryPreset}
+              onChange={(e) => {
+                setEntryPreset(e.target.value);
+                const preset = presets.find((item) => item.id === e.target.value);
+                if (preset) {
+                  setEntryType(preset.type);
+                  const port = preset.config?.port;
+                  if (typeof port === "number") setEntryPort(String(port));
+                }
+              }}
+            >
+              <option value="">{t("nodes.preset")}</option>
+              {presets
+                .filter((item) => item.kind === "entrypoint")
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+            </Select>
             <Input
               className="w-24"
               placeholder={t("nodes.port")}
@@ -270,12 +308,24 @@ export function NodeConfigCard({ nodeId, onChanged }: NodeConfigCardProps) {
               onChange={(e) => setEgressTag(e.target.value)}
               required
             />
-            <Input
-              className="w-28"
-              placeholder={t("nodes.type")}
-              value={egressType}
-              onChange={(e) => setEgressType(e.target.value)}
-            />
+            <Select
+              className="w-40"
+              value={egressPreset}
+              onChange={(e) => {
+                setEgressPreset(e.target.value);
+                const preset = presets.find((item) => item.id === e.target.value);
+                if (preset) setEgressType(preset.type);
+              }}
+            >
+              <option value="">{t("nodes.preset")}</option>
+              {presets
+                .filter((item) => item.kind === "egress")
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+            </Select>
             <Button type="submit" variant="outline">
               <Plus className="h-4 w-4" />
               {t("common.create")}

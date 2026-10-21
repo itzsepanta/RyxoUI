@@ -36,6 +36,7 @@ publicly observable *capability surface* of comparable panels.
 | Nodes | registry, SSH access, health samples, traffic, install over SSH |
 | Installer | a script that hands a fresh machine to the panel, the CA of the panel |
 | Engines | one contract for every protocol, the xray adapter and its conformance suite |
+| Tools | the key material of the protocols: X25519, domain fronting, vless encryption |
 | API | 22 endpoints, generated OpenAPI document, consistent error envelope |
 | Self update | finds new releases, verifies the checksum, replaces the running binary |
 | Interface | React 18, TypeScript, Vite, Tailwind, English and Persian, light and dark |
@@ -189,6 +190,7 @@ internal/events   event catalogue, outbox and dispatcher
 internal/nodes    node registry, configuration, health, install jobs
 internal/ssh      SSH client, key pairs, host key pinning
 internal/engines  the protocol contract and its adapters
+internal/keys     the key material of the protocols
 internal/certs    the certificate authority of the panel
 internal/installer the script that hands a machine to the panel
 internal/update   self update capability

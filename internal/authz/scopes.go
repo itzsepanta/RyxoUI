@@ -30,6 +30,7 @@ const (
 	ScopeAuditRead      Scope = "audit:read"
 	ScopeTokensRead     Scope = "tokens:read"
 	ScopeTokensWrite    Scope = "tokens:write"
+	ScopeToolsWrite     Scope = "tools:write"
 )
 
 // ScopeInfo describes a scope for the user interface.
@@ -54,6 +55,7 @@ var scopeRegistry = map[Scope]ScopeInfo{
 	ScopeAuditRead:      {"audit:read", "Read the audit log.", "security"},
 	ScopeTokensRead:     {"tokens:read", "View API tokens.", "security"},
 	ScopeTokensWrite:    {"tokens:write", "Create and revoke API tokens.", "security"},
+	ScopeToolsWrite:     {"tools:write", "Use the tools of the panel, such as the key makers.", "tools"},
 }
 
 // Scopes returns every known scope sorted by name.

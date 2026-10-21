@@ -97,6 +97,16 @@ func (s *Server) routeTable() []Route {
 		{Method: http.MethodPost, Path: "/api/templates", Summary: "Create a template.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreateTemplate},
 		{Method: http.MethodDelete, Path: "/api/templates/{id}", Summary: "Remove a template.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeleteTemplate},
 
+		// Presets of the panel.
+		{Method: http.MethodGet, Path: "/api/presets", Summary: "List the presets of the panel.", Scope: authz.ScopeNodesRead, Handler: s.handleListPresets},
+		{Method: http.MethodPost, Path: "/api/presets", Summary: "Create a preset.", Scope: authz.ScopeNodesWrite, Handler: s.handleCreatePreset},
+		{Method: http.MethodDelete, Path: "/api/presets/{id}", Summary: "Remove a preset.", Scope: authz.ScopeNodesWrite, Handler: s.handleDeletePreset},
+
+		// Tools of the panel.
+		{Method: http.MethodPost, Path: "/api/keys/x25519", Summary: "Make a key pair of the curve X25519.", Scope: authz.ScopeToolsWrite, Handler: s.handleX25519Key},
+		{Method: http.MethodPost, Path: "/api/keys/ech", Summary: "Make the key of a domain fronting.", Scope: authz.ScopeToolsWrite, Handler: s.handleECHKey},
+		{Method: http.MethodPost, Path: "/api/keys/vless-encryption", Summary: "Make the key of the encryption of vless.", Scope: authz.ScopeToolsWrite, Handler: s.handleVLESSEncryptionKey},
+
 		// Documentation.
 		{Method: http.MethodGet, Path: "/api/openapi.json", Summary: "The OpenAPI description of this API.", Public: true, Handler: s.handleOpenAPIJSON},
 		{Method: http.MethodGet, Path: "/api/openapi.yaml", Summary: "The OpenAPI description of this API as YAML.", Public: true, Handler: s.handleOpenAPIYAML},
