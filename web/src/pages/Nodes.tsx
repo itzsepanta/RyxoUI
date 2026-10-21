@@ -9,6 +9,8 @@ import {
   Button,
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
   Input,
   Spinner,
   Table,
@@ -165,6 +167,18 @@ export function NodesPage() {
       ) : null}
 
       <Card>
+        <CardHeader>
+          <CardTitle>{t("nodes.installScript")}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm">
+          <p className="text-muted-foreground">{t("nodes.installScriptHint")}</p>
+          <code className="break-all rounded-md border border-border bg-muted/40 p-2 text-xs">
+            {installCommand()}
+          </code>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardContent className="p-0">
           {loading ? (
             <div className="grid place-items-center p-8">
@@ -241,4 +255,10 @@ function formatBytes(value: number) {
     unit += 1;
   }
   return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
+// installCommand is the command an operator runs on a fresh machine.
+function installCommand() {
+  const origin = typeof window === "undefined" ? "https://panel.example" : window.location.origin;
+  return `curl -fsSL ${origin}/install/ryxoui.sh | sh -s -- --panel ${origin} --name <name> --address <address> --token <token>`;
 }

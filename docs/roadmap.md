@@ -206,7 +206,7 @@ React 18 + TS + Vite + Tailwind + shadcn/ui. صفحات اصلی:
 - [ ] **M1.8** ابزارهای کلید: keypair، reality، vless-encryption، ECH keypair (در M5 نهایی می‌شود).
 - [ ] **M1.9** لاگ نود: tail با فیلتر سطح/زمان، ring buffer.
 - [~] **M1.10** صفحهٔ نودها + تب detail (overview/health/logs/config) + جادوگر نصب. — 🟡 صفحهٔ نودها و بخش‌های overview/health/config/SSH/نصب موجود. مانده: تب لاگ، جادوگر نصب و diff قبل از Apply.
-- [ ] **M1.11** مسیر `/install/ryxoui.sh` + endpoint دانلود باینری + CA panel.
+- [x] **M1.11** مسیر `/install/ryxoui.sh` + endpoint دانلود باینری + CA panel. — ✅ `internal/installer` (اسکریپت نصب) + `internal/certs` (CA خودامضا) + مسیرهای `/install/*` (اسکریپت، CA، باینری، ثبت و تأیید با توکن).
 
 **DoD M1:** نصب خودکار xray روی یک VPS آزمایشی، ساخت entrypoint، ساخت کاربر آزمایشی، تأیید connection.
 

@@ -34,6 +34,7 @@ publicly observable *capability surface* of comparable panels.
 | Audit | every change is logged inside the same transaction as the change |
 | Events | durable outbox, retry with backoff, delivery records, 9 event types |
 | Nodes | registry, SSH access, health samples, traffic, install over SSH |
+| Installer | a script that hands a fresh machine to the panel, the CA of the panel |
 | Engines | one contract for every protocol, the xray adapter and its conformance suite |
 | API | 22 endpoints, generated OpenAPI document, consistent error envelope |
 | Self update | finds new releases, verifies the checksum, replaces the running binary |
@@ -102,6 +103,21 @@ every scope; create further operators with narrower roles from the
 | `--tls` | `none` | `none` or `auto` |
 | `--cert-file`, `--key-file` | empty | certificate for `auto` |
 | `--log-level` | `info` | `debug`, `info`, `warn` or `error` |
+
+## Installing a node
+
+A fresh machine can hand itself to the panel with one command. The script
+registers the machine, gives the panel its own key and confirms that the key
+works. The token needs the scope `nodes:write` and is made on the **API
+tokens** screen.
+
+```bash
+curl -fsSL https://panel.example/install/ryxoui.sh | sh -s -- \
+  --panel https://panel.example --name eu-1 --address 10.0.0.5 --token <token>
+```
+
+The panel serves the script, its certificate authority and the binary of the
+panel under `/install/`.
 
 ## Auto update
 
@@ -173,6 +189,8 @@ internal/events   event catalogue, outbox and dispatcher
 internal/nodes    node registry, configuration, health, install jobs
 internal/ssh      SSH client, key pairs, host key pinning
 internal/engines  the protocol contract and its adapters
+internal/certs    the certificate authority of the panel
+internal/installer the script that hands a machine to the panel
 internal/update   self update capability
 internal/api      HTTP API, route table and OpenAPI generation
 internal/web      embedded frontend assets

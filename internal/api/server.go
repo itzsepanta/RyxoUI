@@ -11,10 +11,12 @@ import (
 	"github.com/ryxoui/ryxoui/internal/audit"
 	"github.com/ryxoui/ryxoui/internal/auth"
 	"github.com/ryxoui/ryxoui/internal/authz"
+	"github.com/ryxoui/ryxoui/internal/certs"
 	"github.com/ryxoui/ryxoui/internal/db"
 	"github.com/ryxoui/ryxoui/internal/engines"
 	"github.com/ryxoui/ryxoui/internal/events"
 	"github.com/ryxoui/ryxoui/internal/nodes"
+	"github.com/ryxoui/ryxoui/internal/update"
 )
 
 // SessionCookieName is the name of the session cookie.
@@ -54,6 +56,17 @@ type Config struct {
 	// Engine is the protocol engine the panel drives on the nodes. It may
 	// be nil, then the panel only manages the nodes themselves.
 	Engine engines.Engine
+	// Repository is the release feed of the panel, as "owner/name". It is
+	// used to serve the binary of the panel to the nodes.
+	Repository string
+}
+
+// repositoryOf returns the release feed of the panel.
+func repositoryOf(cfg Config) string {
+	if cfg.Repository != "" {
+		return cfg.Repository
+	}
+	return "itzsepanta/RyxoUI"
 }
 
 // Server serves the panel API.
@@ -78,6 +91,8 @@ type Server struct {
 	registry  *events.Registry
 	limiter   *limiter
 	engine    engines.Engine
+	certs     *certs.Store
+	releases  *update.GitHubClient
 	probe     func(ctx context.Context, node nodes.Node, privateKey string) (nodes.ProbeResult, error)
 }
 
@@ -113,6 +128,8 @@ func New(cfg Config) (*Server, error) {
 		registry:  events.DefaultRegistry(),
 		limiter:   newLimiter(cfg.RateLimitPerSecond, cfg.RateLimitBurst),
 		engine:    cfg.Engine,
+		certs:     certs.NewStore(cfg.DB),
+		releases:  update.NewGitHubClient(repositoryOf(cfg)),
 		probe:     nodes.Probe,
 	}
 	srv.installer = nodes.NewInstaller(srv.nodes, srv.keys, srv.jobs, srv.config, srv.probe, nodes.InstallerOptions{

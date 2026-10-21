@@ -304,6 +304,7 @@ func serve(args []string) error {
 		Version:            version,
 		Platform:           update.Current().String(),
 		Engine:             engine,
+		Repository:         parsed.get("repo", defaultUpdateRepository),
 	})
 	if err != nil {
 		return err
@@ -344,6 +345,7 @@ func serve(args []string) error {
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/", server.Handler())
+	mux.Handle("/install/", server.InstallerHandler())
 	mux.Handle("/", web.Handler())
 
 	listen := parsed.get("listen", "127.0.0.1:8080")

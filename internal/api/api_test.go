@@ -75,8 +75,30 @@ func (e *testEnv) do(t *testing.T, method, path string, body any, cookie string)
 	return rec
 }
 
-func (e *testEnv) setup(t *testing.T) string {
+// doInstall calls the install paths with an API token.
+func (e *testEnv) doInstall(t *testing.T, method, path string, body any, token string) *httptest.ResponseRecorder {
 	t.Helper()
+	var reader io.Reader
+	if body != nil {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		reader = bytes.NewReader(raw)
+	}
+	req := httptest.NewRequest(method, path, reader)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	e.server.InstallerHandler().ServeHTTP(rec, req)
+	return rec
+}
+
+func (e *testEnv) setup(t *testing.T) string {
 	rec := e.do(t, http.MethodPost, "/api/setup", map[string]string{
 		"username": "owner", "password": "correct horse",
 	}, "")
